@@ -51,19 +51,21 @@ async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, Cancel
 
     if (message != null && message.Text == "/start")
     {
-        InlineKeyboardMarkup inlineKeyboard = new(new[]{
-            new [] { InlineKeyboardButton.WithCallbackData(text: "🧮 Открыть ECN счёт", callbackData: "createECNAccount") },
-            new [] { InlineKeyboardButton.WithCallbackData(text: "💳 Внести средства", callbackData: "11") },
-            new [] { InlineKeyboardButton.WithCallbackData(text: "🏦 Вывести средства", callbackData: "11") },
-            new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://github.com/TelegramBots/Telegram.Bot"), InlineKeyboardButton.WithCallbackData(text: "👨‍💻 Тех Поддерджка", callbackData: "11") }
-        });
+        //await botClient.ПРОДОЛЖИТЬ КОД
 
-        idMessage = await botClient.SendTextMessageAsync(
-            chatId: message.Chat.Id,
-            text: $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {message.Chat.Id}</i>\n\n💰 Баланс: <i>{balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{numOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {dateOfRegister.ToLongDateString()} {dateOfRegister.ToLongTimeString()}",
-            replyMarkup: inlineKeyboard,
-            parseMode: ParseMode.Html,
-            cancellationToken: cancellationToken);
+        //InlineKeyboardMarkup inlineKeyboard = new(new[]{
+        //    new [] { InlineKeyboardButton.WithCallbackData(text: "🧮 Открыть ECN счёт", callbackData: "createECNAccount") },
+        //    new [] { InlineKeyboardButton.WithCallbackData(text: "💳 Внести средства", callbackData: "11") },
+        //    new [] { InlineKeyboardButton.WithCallbackData(text: "🏦 Вывести средства", callbackData: "11") },
+        //    new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData(text: "👨‍💻 Тех Поддерджка", callbackData: "techSupport") }
+        //});
+
+        //idMessage = await botClient.SendTextMessageAsync(
+        //    chatId: message.Chat.Id,
+        //    text: $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {message.Chat.Id}</i>\n\n💰 Баланс: <i>{balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{numOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {dateOfRegister.ToLongDateString()} {dateOfRegister.ToLongTimeString()}",
+        //    replyMarkup: inlineKeyboard,
+        //    parseMode: ParseMode.Html,
+        //    cancellationToken: cancellationToken);
     }
  
 
@@ -73,17 +75,7 @@ async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, Cancel
 
         if (idMessage != null)
         {
-            //Console.WriteLine($"USER: {message.Chat.Username}, CALLBACKDATA: {callbackData}");
-
             SendButtons(botClient, idMessage, cancellationToken, callbackData);
-            //if (callbackData == "createECNAccount")
-            //{
-                
-            //}
-            //else if(callbackData == "loadMenu")
-            //{
-            //    LoadMenu(botClient, idMessage, cancellationToken);
-            //}
         }       
     } 
 }
@@ -134,6 +126,20 @@ async void SendButtons(ITelegramBotClient botClient, Message message, Cancellati
                 chatId: idMessage.Chat.Id,
                 messageId: idMessage.MessageId,
                 text: "💶 Фиатные - Физическая валюта.\n™️ Акционные - Акции компаний.\n👛 Криптовалюта - Вид цифровой валюты.\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n<b>Выберите категорию активов.</b>",
+                replyMarkup: inlineKeyboard,
+                parseMode: ParseMode.Html,
+                cancellationToken: cancellationToken);
+        }
+        else if(type == "techSupport")
+        {
+            InlineKeyboardMarkup inlineKeyboard = new(new[]{
+                new[] {InlineKeyboardButton.WithCallbackData(text: "🔙 Вернутся в главное меню", callbackData: "loadMenu") }
+            });
+
+            await botClient.EditMessageTextAsync(
+                chatId: idMessage.Chat.Id,
+                messageId: idMessage.MessageId,
+                text: "<b>Заметили <u>ошибку</u>, есть <u>проблема</u>, <u>вопрос</u>?</b>\nСкорей пиши в нашу службу поддержки!",
                 replyMarkup: inlineKeyboard,
                 parseMode: ParseMode.Html,
                 cancellationToken: cancellationToken);
