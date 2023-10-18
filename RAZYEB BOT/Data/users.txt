@@ -1,0 +1,16 @@
+[
+  {
+    "Balance": 1000.0,
+    "NumOfTransactions": 0,
+    "DateOfRegister": "2023-10-18T23:44:35.7922524+03:00",
+    "Username": "Scar1xrd1",
+    "Id": 730940641
+  },
+  {
+    "Balance": 0.0,
+    "NumOfTransactions": 0,
+    "DateOfRegister": "2023-10-18T23:31:47.2794448+03:00",
+    "Username": "Sttupid_nigga",
+    "Id": 409013849
+  }
+]
