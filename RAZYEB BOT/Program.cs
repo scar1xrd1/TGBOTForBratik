@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿using Microsoft.VisualBasic;
+using System.Runtime.InteropServices;
+using System.Threading;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
@@ -67,14 +69,65 @@ async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, Cancel
 
     if (update.CallbackQuery is { } callbackQuery)
     {
-        await Console.Out.WriteLineAsync("123");
-
         var callbackData = callbackQuery.Data; // Текст который вернула инлайн-кнопка
 
-        if (idMessage != null && callbackData == "createECNAccount")
-        {            
+        if (idMessage != null)
+        {
+            //Console.WriteLine($"USER: {message.Chat.Username}, CALLBACKDATA: {callbackData}");
+
+            SendButtons(botClient, idMessage, cancellationToken, callbackData);
+            //if (callbackData == "createECNAccount")
+            //{
+                
+            //}
+            //else if(callbackData == "loadMenu")
+            //{
+            //    LoadMenu(botClient, idMessage, cancellationToken);
+            //}
+        }       
+    } 
+}
+
+async void SendButtons(ITelegramBotClient botClient, Message message, CancellationToken cancellationToken, string type)
+{
+    if(message != null)
+    {
+        if(type == "loadMenu")
+        {
             InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                new[] { InlineKeyboardButton.WithCallbackData(text: "™️ Акционные активы", callbackData: "selectTypeECNAccount") }
+                new [] { InlineKeyboardButton.WithCallbackData(text: "🧮 Открыть ECN счёт", callbackData: "createECNAccount") },
+                new [] { InlineKeyboardButton.WithCallbackData(text: "💳 Внести средства", callbackData: "11") },
+                new [] { InlineKeyboardButton.WithCallbackData(text: "🏦 Вывести средства", callbackData: "11") },
+                new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://github.com/TelegramBots/Telegram.Bot"), InlineKeyboardButton.WithCallbackData(text: "👨‍💻 Тех Поддерджка", callbackData: "11") }
+             });
+
+            if (idMessage != null)
+            {
+                idMessage = await botClient.EditMessageTextAsync(
+                    chatId: message.Chat.Id,
+                    messageId: idMessage.MessageId,
+                    text: $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {message.Chat.Id}</i>\n\n💰 Баланс: <i>{balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{numOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {dateOfRegister.ToLongDateString()} {dateOfRegister.ToLongTimeString()}",
+                    replyMarkup: inlineKeyboard,
+                    parseMode: ParseMode.Html,
+                    cancellationToken: cancellationToken);
+            }
+            else
+            {
+                idMessage = await botClient.SendTextMessageAsync(
+                   chatId: message.Chat.Id,
+                   text: $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {message.Chat.Id}</i>\n\n💰 Баланс: <i>{balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{numOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {dateOfRegister.ToLongDateString()} {dateOfRegister.ToLongTimeString()}",
+                   replyMarkup: inlineKeyboard,
+                   parseMode: ParseMode.Html,
+                   cancellationToken: cancellationToken);
+            }
+           
+        }
+        else if(type == "createECNAccount")
+        {
+            InlineKeyboardMarkup inlineKeyboard = new(new[]{
+                new[] { InlineKeyboardButton.WithCallbackData(text: "™️ Акционные активы", callbackData: "equityAssets"), InlineKeyboardButton.WithCallbackData(text: "💶 Фиатные активы", callbackData: "fiatAssets") },
+                new[] {InlineKeyboardButton.WithCallbackData(text: "👛 Криптовалюта", callbackData:"crypto") },
+                new[] {InlineKeyboardButton.WithCallbackData(text: "🔙 Вернутся в главное меню", callbackData: "loadMenu") }
             });
 
             await botClient.EditMessageTextAsync(
@@ -85,8 +138,9 @@ async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, Cancel
                 parseMode: ParseMode.Html,
                 cancellationToken: cancellationToken);
         }
-    } 
+    }
 }
+
 Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
 {
     var ErrorMessage = exception switch
