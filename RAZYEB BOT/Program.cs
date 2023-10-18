@@ -50,11 +50,12 @@ async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, Cancel
     if (message != null && message.Text == "/start")
     {
         InlineKeyboardMarkup inlineKeyboard = new(new[]{
-        new [] { InlineKeyboardButton.WithCallbackData(text: "🧮 Открыть ECN счёт", callbackData: "11") },
-        new [] { InlineKeyboardButton.WithCallbackData(text: "💳 Внести средства", callbackData: "11") },
-        new [] { InlineKeyboardButton.WithCallbackData(text: "🏦 Вывести средства", callbackData: "11") },
-        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://github.com/TelegramBots/Telegram.Bot"), InlineKeyboardButton.WithCallbackData(text: "👨‍💻 Тех Поддерджка", callbackData: "11") }
-    });
+            new [] { InlineKeyboardButton.WithCallbackData(text: "🧮 Открыть ECN счёт", callbackData: "createECNAccount") },
+            new [] { InlineKeyboardButton.WithCallbackData(text: "💳 Внести средства", callbackData: "11") },
+            new [] { InlineKeyboardButton.WithCallbackData(text: "🏦 Вывести средства", callbackData: "11") },
+            new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://github.com/TelegramBots/Telegram.Bot"), InlineKeyboardButton.WithCallbackData(text: "👨‍💻 Тех Поддерджка", callbackData: "11") }
+        });
+
         idMessage = await botClient.SendTextMessageAsync(
             chatId: message.Chat.Id,
             text: $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {message.Chat.Id}</i>\n\n💰 Баланс: <i>{balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{numOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {dateOfRegister.ToLongDateString()} {dateOfRegister.ToLongTimeString()}",
@@ -70,12 +71,18 @@ async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, Cancel
 
         var callbackData = callbackQuery.Data; // Текст который вернула инлайн-кнопка
 
-        if (idMessage != null && callbackData == "11")
+        if (idMessage != null && callbackData == "createECNAccount")
         {            
+            InlineKeyboardMarkup inlineKeyboard = new(new[]{
+                new[] { InlineKeyboardButton.WithCallbackData(text: "™️ Акционные активы", callbackData: "selectTypeECNAccount") }
+            });
+
             await botClient.EditMessageTextAsync(
                 chatId: idMessage.Chat.Id,
                 messageId: idMessage.MessageId,
-                text: "Ну хз",
+                text: "💶 Фиатные - Физическая валюта.\n™️ Акционные - Акции компаний.\n👛 Криптовалюта - Вид цифровой валюты.\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n<b>Выберите категорию активов.</b>",
+                replyMarkup: inlineKeyboard,
+                parseMode: ParseMode.Html,
                 cancellationToken: cancellationToken);
         }
     } 
