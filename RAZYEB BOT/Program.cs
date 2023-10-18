@@ -51,7 +51,7 @@ async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, Cancel
 
     if (message != null && message.Text == "/start")
     {
-        //await botClient.ПРОДОЛЖИТЬ КОД
+        //await botClient.ПРОДОЛЖИТЬ КОД 
 
         //InlineKeyboardMarkup inlineKeyboard = new(new[]{
         //    new [] { InlineKeyboardButton.WithCallbackData(text: "🧮 Открыть ECN счёт", callbackData: "createECNAccount") },
