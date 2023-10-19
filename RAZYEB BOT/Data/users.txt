@@ -1,6 +1,6 @@
 [
   {
-    "Balance": 1000.0,
+    "Balance": 999999.0,
     "NumOfTransactions": 0,
     "DateOfRegister": "2023-10-18T23:44:35.7922524+03:00",
     "Username": "Scar1xrd1",
