@@ -1,11 +1,14 @@
 ﻿using Newtonsoft.Json;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
+using Telegram.Bot.Requests.Abstractions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.ReplyMarkups;
 
 TGBot telegramBot = new TGBot();
@@ -16,6 +19,12 @@ class UserData
     public double Balance { get; set; }
     public int NumOfTransactions { get; set; }
     public DateTime DateOfRegister { get; set; }
+
+    public double InvestmentAmount { get; set; }
+    public string CourseDirection { get; set; }
+    public string SelectedAsset { get; set; }
+    public string ShowedChangeDirection { get;set; }
+
     public string Username { get; set; }
     public long Id { get; set; }
 
@@ -26,6 +35,10 @@ class UserData
         DateOfRegister = DateTime.Now;
         Id = id;
         Username = username;
+
+        CourseDirection = "⬆UP";
+        ShowedChangeDirection = "вниз";
+        InvestmentAmount = 0;
     }
 }
 
@@ -38,6 +51,8 @@ class TGBot
 
     bool waitSumWithdraw = false;
     bool waitRequisites = false;
+    bool waitSumInvestment = false;
+    bool waitUpdateBetThread = false;
 
     List<UserData> users;
 
@@ -139,7 +154,7 @@ class TGBot
             var chatId = message.Chat.Id;
             var user = USER(chatId);
 
-            if (message.Text == "/start")
+            if (message.Text == "/start" && !waitUpdateBetThread)
             {
                 DisableChecks();
 
@@ -167,7 +182,7 @@ class TGBot
 
                     InlineKeyboardMarkup inlineKeyboard = new(new[]{
                     new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", "loadMenu") }
-                });
+                     });
 
                     idMessage = await botClient.EditMessageTextAsync(
                         chatId: idMessage.Chat.Id,
@@ -210,6 +225,29 @@ class TGBot
                     parseMode: ParseMode.Html,
                     cancellationToken: cancellationToken);
             }
+            else if(waitSumInvestment)
+            {
+                waitSumInvestment = false;
+
+                double sum;
+                if (double.TryParse(message.Text, out sum) && sum <= user.Balance && sum >= 500) user.InvestmentAmount = sum;
+
+                InlineKeyboardMarkup inlineKeyboard = new(new[]{
+                     new [] { InlineKeyboardButton.WithCallbackData($"Актив пойдёт {user.ShowedChangeDirection}", "betChangeDirection") },
+                     new [] { InlineKeyboardButton.WithCallbackData("Ввести сумму инвестиции", "enterSumInvestment") },
+                     new [] { InlineKeyboardButton.WithCallbackData(text: "🔙 Вернутся к выбору актива", "createECNAccount"), InlineKeyboardButton.WithCallbackData("Подтвердить", "betAccept") }
+                 });
+
+                await botClient.DeleteMessageAsync(idMessage.Chat.Id, idMessage.MessageId);
+                await botClient.DeleteMessageAsync(chatId, message.MessageId);
+
+                idMessage = await botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    text: $"Ваш баланс: {user.Balance} ₽\n<i>Минимальная сумма инвестиции: <b>500 ₽</b></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыбранные активы: {user.SelectedAsset}\n\nВведённая сумма инвестиции: <b>{user.InvestmentAmount} ₽</b>\nПредположеное направление курса: {user.CourseDirection[..1]}",
+                    replyMarkup: inlineKeyboard,
+                    parseMode: ParseMode.Html,
+                    cancellationToken: cancellationToken);
+            }
             else
             {
                 await botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
@@ -231,6 +269,8 @@ class TGBot
     {
         waitSumWithdraw = false;
         waitRequisites = false;
+        waitSumInvestment = false;
+        waitUpdateBetThread = false;
     }
 
     async void SendButtons(ITelegramBotClient botClient, Message message, CancellationToken cancellationToken, string type)
@@ -339,7 +379,60 @@ class TGBot
                     parseMode: ParseMode.Html,
                     cancellationToken: cancellationToken);
             }
-            else if (type[..6] == "assets")
+            else if(type == "enterSumInvestment")
+            {
+                waitSumInvestment = true;
+
+                idMessage = await botClient.EditMessageTextAsync(
+                    chatId: message.Chat.Id,
+                    messageId: message.MessageId,
+                    text: "Отправьте сумму для инвестиции.",
+                    cancellationToken: cancellationToken);
+            }
+            else if(type.Length > 3 && type[..3] == "bet")
+            {
+                bool successfully = true;
+
+                if (type[3..] == "ChangeDirection")
+                {
+                    if (user.CourseDirection[1..] == "UP") { user.CourseDirection = "⬇️DOWN"; user.ShowedChangeDirection = "вверх"; }
+                    else { user.CourseDirection = "⬆UP"; user.ShowedChangeDirection = "вниз"; }
+                }
+                else if (type[3..] == "Accept")
+                {
+                    if (user.InvestmentAmount >= 500 && user.Balance >= user.InvestmentAmount)
+                    {
+                        var updateThread = new Thread(() => UpdateMessageBet(cancellationToken));
+                        updateThread.Start();
+                    }
+                    else
+                    {
+                        successfully = false;
+                    }
+                }    
+                else user.SelectedAsset = type[3..];
+
+                if (type[3..] != "Accept")
+                {
+                    InlineKeyboardMarkup inlineKeyboard = new(new[]{
+                    new [] { InlineKeyboardButton.WithCallbackData($"Актив пойдёт {user.ShowedChangeDirection}", "betChangeDirection") },
+                    new [] { InlineKeyboardButton.WithCallbackData("Ввести сумму инвестиции", "enterSumInvestment") },
+                    new [] { InlineKeyboardButton.WithCallbackData(text: "🔙 Вернутся к выбору актива", "createECNAccount"), InlineKeyboardButton.WithCallbackData("Подтвердить", "betAccept") }
+                });
+
+                    string mess = $"Ваш баланс: {user.Balance} ₽\n<i>Минимальная сумма инвестиции: <b>500 ₽</b></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыбранные активы: {user.SelectedAsset}\n\nВведённая сумма инвестиции: <b>{user.InvestmentAmount} ₽</b>\nПредположеное направление курса: {user.CourseDirection[..1]}";
+
+                    await botClient.DeleteMessageAsync(idMessage.Chat.Id, idMessage.MessageId);
+
+                    idMessage = await botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        text: successfully ? mess : "‼️Депозит должен быть больше или равен минимальному‼️\n\n" + mess,
+                        replyMarkup: inlineKeyboard,
+                        parseMode: ParseMode.Html,
+                        cancellationToken: cancellationToken);
+                }                
+            }
+            else if (type.Length > 6 && type[..6] == "assets")
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[] { new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", "loadMenu") } });
 
@@ -361,7 +454,22 @@ class TGBot
                     new[] { InlineKeyboardButton.WithCallbackData($"LTC {GetForecast()}", "betLTC"), InlineKeyboardButton.WithCallbackData($"XMR {GetForecast()}", "betXMR"), InlineKeyboardButton.WithCallbackData($"ETC {GetForecast()}", "betETC") },
                     new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся к выбору актива", "createECNAccount") }
                      });
-                }                
+                }        
+                else if (type[6..] == "Equity")
+                {
+                    inlineKeyboard = new(new[]
+                    {
+                        new[] { InlineKeyboardButton.WithCallbackData($"GOOG {GetForecast()}", "betGOOG"), InlineKeyboardButton.WithCallbackData($"AMZN {GetForecast()}", "betAMZN"), InlineKeyboardButton.WithCallbackData($"SBER {GetForecast()}", "betSBER") },
+                        new[] { InlineKeyboardButton.WithCallbackData($"NKE {GetForecast()}", "betNKE"), InlineKeyboardButton.WithCallbackData($"BRK.A {GetForecast()}", "betBRK.A"), InlineKeyboardButton.WithCallbackData($"BA {GetForecast()}", "betBA") },
+                        new[] { InlineKeyboardButton.WithCallbackData($"TSLA {GetForecast()}", "betTSLA") },
+                        new[] { InlineKeyboardButton.WithCallbackData($"KO {GetForecast()}", "betKO"), InlineKeyboardButton.WithCallbackData($"INTC {GetForecast()}", "betINTC"), InlineKeyboardButton.WithCallbackData($"MA {GetForecast()}", "betMA") },
+                        new[] { InlineKeyboardButton.WithCallbackData($"MCD {GetForecast()}", "betMCD"), InlineKeyboardButton.WithCallbackData($"META {GetForecast()}", "betMETA"), InlineKeyboardButton.WithCallbackData($"MSFT {GetForecast()}", "betMSFT") },
+                        new[] { InlineKeyboardButton.WithCallbackData($"AAPL {GetForecast()}", "betAAPL") },
+                        new[] { InlineKeyboardButton.WithCallbackData($"NFLX {GetForecast()}", "betNFLX"), InlineKeyboardButton.WithCallbackData($"NVDA {GetForecast()}", "betNVDA"), InlineKeyboardButton.WithCallbackData($"PEP {GetForecast()}", "betPEP") },
+                        new[] { InlineKeyboardButton.WithCallbackData($"PFE {GetForecast()}", "betPFE"), InlineKeyboardButton.WithCallbackData($"VISA {GetForecast()}", "betVISA"), InlineKeyboardButton.WithCallbackData($"SBUX {GetForecast()}", "betSBUX") },
+                        new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся к выбору актива", "createECNAccount") }
+                    });
+                }
 
                 idMessage = await botClient.EditMessageTextAsync(
                     chatId: idMessage.Chat.Id,
@@ -386,6 +494,23 @@ class TGBot
                     cancellationToken: cancellationToken);
             }
         }
+    }
+
+    async void UpdateMessageBet(CancellationToken cancellationToken)
+    {
+        for (int i = 15; i >= 1; i--)
+        {
+            idMessage = await botClient.EditMessageTextAsync(
+            chatId: idMessage.Chat.Id,
+            messageId: idMessage.MessageId,
+            text: $"Получение данных о графике: {i} секунд",
+            parseMode: ParseMode.Html,
+            cancellationToken: cancellationToken);
+
+            Thread.Sleep(1000);
+        }
+
+        // ПРОДОЛЖИТЬ КОД
     }
 
     string GetForecast()
