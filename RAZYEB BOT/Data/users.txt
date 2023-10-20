@@ -3,6 +3,10 @@
     "Balance": 999999.0,
     "NumOfTransactions": 0,
     "DateOfRegister": "2023-10-18T23:44:35.7922524+03:00",
+    "InvestmentAmount": 0.0,
+    "CourseDirection": "⬆UP",
+    "SelectedAsset": null,
+    "ShowedChangeDirection": "вниз",
     "Username": "Scar1xrd1",
     "Id": 730940641
   },
@@ -10,6 +14,10 @@
     "Balance": 0.0,
     "NumOfTransactions": 0,
     "DateOfRegister": "2023-10-18T23:31:47.2794448+03:00",
+    "InvestmentAmount": 0.0,
+    "CourseDirection": "⬆UP",
+    "SelectedAsset": null,
+    "ShowedChangeDirection": "вниз",
     "Username": "Sttupid_nigga",
     "Id": 409013849
   }
