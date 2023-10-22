@@ -19,11 +19,16 @@ class UserData
     public double Balance { get; set; }
     public int NumOfTransactions { get; set; }
     public DateTime DateOfRegister { get; set; }
-
+    // Фишки для ставочек
     public double InvestmentAmount { get; set; }
     public string CourseDirection { get; set; }
     public string SelectedAsset { get; set; }
     public string ShowedChangeDirection { get;set; }
+    public string Status { get; set; }
+    // Кто есть кто
+    public bool IsWorker { get; set; }
+    public bool IsAdmin { get; set; }
+    public List<UserData> Refferals { get; set; }
 
     public string Username { get; set; }
     public long Id { get; set; }
@@ -36,9 +41,12 @@ class UserData
         Id = id;
         Username = username;
 
-        CourseDirection = "⬆UP";
+        IsWorker = false;
+        CourseDirection = "Вверх ⬆";
         ShowedChangeDirection = "вниз";
         InvestmentAmount = 0;
+        Status = "RANDOM";
+        Refferals = new List<UserData>();
     }
 }
 
@@ -154,7 +162,7 @@ class TGBot
             var chatId = message.Chat.Id;
             var user = USER(chatId);
 
-            if (message.Text == "/start" && !waitUpdateBetThread)
+            if (message.Text.StartsWith("/start") && !waitUpdateBetThread)
             {
                 DisableChecks();
 
@@ -166,8 +174,8 @@ class TGBot
             });
 
                 idMessage = await botClient.SendTextMessageAsync(
-                    chatId: chatId,
-                    text: $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {chatId}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()}   {user.DateOfRegister.ToLongTimeString()}",
+                    chatId: chatId, // ДОДЕЛАТЬ КОД! ЧЕРЕЗ ССЫЛКУ В СТАРТ ПЕРЕДАЕТСЯ АЙДИШНИК РЕФЕРАЛА!
+                    text: $"https://t.me/poloniexruBot?start={user.Id}\n👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {chatId}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()}   {user.DateOfRegister.ToLongTimeString()}",
                     replyMarkup: inlineKeyboard,
                     parseMode: ParseMode.Html,
                     cancellationToken: cancellationToken);
@@ -243,7 +251,7 @@ class TGBot
 
                 idMessage = await botClient.SendTextMessageAsync(
                     chatId: message.Chat.Id,
-                    text: $"Ваш баланс: {user.Balance} ₽\n<i>Минимальная сумма инвестиции: <b>500 ₽</b></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыбранные активы: {user.SelectedAsset}\n\nВведённая сумма инвестиции: <b>{user.InvestmentAmount} ₽</b>\nПредположеное направление курса: {user.CourseDirection[..1]}",
+                    text: $"Ваш баланс: {user.Balance} ₽\n<i>Минимальная сумма инвестиции: <b>500 ₽</b></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыбранные активы: {user.SelectedAsset}\n\nВведённая сумма инвестиции: <b>{user.InvestmentAmount} ₽</b>\nПредположеное направление курса: {user.CourseDirection[user.CourseDirection.Length-1]}",
                     replyMarkup: inlineKeyboard,
                     parseMode: ParseMode.Html,
                     cancellationToken: cancellationToken);
@@ -365,6 +373,9 @@ class TGBot
             }
             else if (type == "createECNAccount")
             {
+                user.InvestmentAmount = 0;
+                user.SelectedAsset = string.Empty;
+
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
                 new[] { InlineKeyboardButton.WithCallbackData(text: "™️ Акционные активы", callbackData: "assetsEquity"), InlineKeyboardButton.WithCallbackData("💶 Фиатные активы", callbackData: "assetsFiat") },
                 new[] {InlineKeyboardButton.WithCallbackData(text: "👛 Криптовалюта", "assetsCrypto") },
@@ -395,14 +406,14 @@ class TGBot
 
                 if (type[3..] == "ChangeDirection")
                 {
-                    if (user.CourseDirection[1..] == "UP") { user.CourseDirection = "⬇️DOWN"; user.ShowedChangeDirection = "вверх"; }
-                    else { user.CourseDirection = "⬆UP"; user.ShowedChangeDirection = "вниз"; }
+                    if (user.CourseDirection.Contains("Вверх")) { user.CourseDirection = "Вниз ⬇"; user.ShowedChangeDirection = "вверх"; }
+                    else { user.CourseDirection = "Вверх ⬆"; user.ShowedChangeDirection = "вниз"; }
                 }
                 else if (type[3..] == "Accept")
                 {
                     if (user.InvestmentAmount >= 500 && user.Balance >= user.InvestmentAmount)
                     {
-                        var updateThread = new Thread(() => UpdateMessageBet(cancellationToken));
+                        var updateThread = new Thread(() => UpdateMessageBet(cancellationToken, user));
                         updateThread.Start();
                     }
                     else
@@ -420,7 +431,7 @@ class TGBot
                     new [] { InlineKeyboardButton.WithCallbackData(text: "🔙 Вернутся к выбору актива", "createECNAccount"), InlineKeyboardButton.WithCallbackData("Подтвердить", "betAccept") }
                 });
 
-                    string mess = $"Ваш баланс: {user.Balance} ₽\n<i>Минимальная сумма инвестиции: <b>500 ₽</b></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыбранные активы: {user.SelectedAsset}\n\nВведённая сумма инвестиции: <b>{user.InvestmentAmount} ₽</b>\nПредположеное направление курса: {user.CourseDirection[..1]}";
+                    string mess = $"Ваш баланс: {user.Balance} ₽\n<i>Минимальная сумма инвестиции: <b>500 ₽</b></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыбранные активы: {user.SelectedAsset}\n\nВведённая сумма инвестиции: <b>{user.InvestmentAmount} ₽</b>\nПредположеное направление курса: {user.CourseDirection[user.CourseDirection.Length-1]}";
 
                     await botClient.DeleteMessageAsync(idMessage.Chat.Id, idMessage.MessageId);
 
@@ -496,7 +507,7 @@ class TGBot
         }
     }
 
-    async void UpdateMessageBet(CancellationToken cancellationToken)
+    async void UpdateMessageBet(CancellationToken cancellationToken, UserData user)
     {
         for (int i = 15; i >= 1; i--)
         {
@@ -504,13 +515,60 @@ class TGBot
             chatId: idMessage.Chat.Id,
             messageId: idMessage.MessageId,
             text: $"Получение данных о графике: {i} секунд",
-            parseMode: ParseMode.Html,
             cancellationToken: cancellationToken);
 
             Thread.Sleep(1000);
         }
 
-        // ПРОДОЛЖИТЬ КОД
+        user.NumOfTransactions++;
+        bool betClosed = false;
+        string courseChanged;
+
+        if(user.Status == "RANDOM") // ОПРЕДЕЛЯЕМ РАНДОМНО ЗАШЛА ЛИ СТАВКА
+        {
+            int r = random.Next(1, 3);
+
+            if(r == 1)
+            {
+                betClosed = true;
+                user.Balance += user.InvestmentAmount * 0.8;
+            }
+            else
+            {
+                betClosed = false;
+                user.Balance -= user.InvestmentAmount;
+            }
+        }
+        else if(user.Status == "LOSE") // СТАВКА ВСЕГДА ПРОСИРАЕТСЯ
+        {
+            betClosed = false;
+            user.Balance -= user.InvestmentAmount;
+        }
+        else // СТАВКА ВСЕГДА ЗАХОДИТ
+        {
+            betClosed = true;
+            user.Balance += user.InvestmentAmount * 0.8;
+        }
+
+        if (user.CourseDirection.Contains("Вверх")) courseChanged = betClosed ? user.CourseDirection : "Вниз ⬇";
+        else courseChanged = betClosed ? user.CourseDirection : "Вверх ⬆";
+
+        InlineKeyboardMarkup inlineKeyboard = new(new[]{
+                new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", "loadMenu") }
+            });
+
+        idMessage = await botClient.EditMessageTextAsync(
+            chatId: idMessage.Chat.Id,
+            messageId: idMessage.MessageId,
+            text: $"Имя пользователя: <i>@{user.Username}</i>\nTelegramID: <i>{user.Id}</i>\n\nИнвестиция в актив: <i>{user.SelectedAsset}</i>\nСумма инвестиции: <i>{user.InvestmentAmount} ₽</i>\nПрогноз пользователя: <i>{user.CourseDirection}</i>\nПроцент при успешном прогнозе: <i><u>180%</u></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nИзменения актива: {user.SelectedAsset}\n\nКурс изменился: {courseChanged}\n{(betClosed ? "Прибыль" : "Убыток")} составляет: {(betClosed ? user.InvestmentAmount * 0.8 : user.InvestmentAmount)}\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🗓 {DateTime.Now.ToShortDateString()}, {DateTime.Now.ToLongTimeString()}",
+            replyMarkup: inlineKeyboard,
+            parseMode: ParseMode.Html,
+            cancellationToken: cancellationToken);
+
+        user.InvestmentAmount = 0;
+        user.SelectedAsset = string.Empty;
+
+        SaveData();
     }
 
     string GetForecast()
