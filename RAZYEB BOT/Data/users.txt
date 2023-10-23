@@ -1,26 +1,17 @@
 [
   {
-    "Balance": 1007399.0,
-    "NumOfTransactions": 4,
-    "DateOfRegister": "2023-10-18T23:44:35.7922524+03:00",
-    "InvestmentAmount": 0.0,
-    "CourseDirection": "Вниз ⬇",
-    "SelectedAsset": "",
-    "ShowedChangeDirection": "вверх",
-    "Status": "RANDOM",
-    "Username": "Scar1xrd1",
-    "Id": 730940641
-  },
-  {
     "Balance": 0.0,
     "NumOfTransactions": 0,
-    "DateOfRegister": "2023-10-18T23:31:47.2794448+03:00",
+    "DateOfRegister": "2023-10-24T00:22:31.1312182+03:00",
     "InvestmentAmount": 0.0,
     "CourseDirection": "Вверх ⬆",
     "SelectedAsset": null,
     "ShowedChangeDirection": "вниз",
     "Status": "RANDOM",
-    "Username": "Sttupid_nigga",
-    "Id": 409013849
+    "IsWorker": true,
+    "IsAdmin": false,
+    "Refferals": [],
+    "Username": "Scar1xrd1",
+    "Id": 730940641
   }
-]
+]]
