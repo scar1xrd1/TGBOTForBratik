@@ -1,17 +1,131 @@
 [
   {
-    "Balance": 0.0,
-    "NumOfTransactions": 0,
+    "waitSumWithdraw": false,
+    "waitRequisites": false,
+    "waitSumInvestment": false,
+    "waitUpdateBetThread": false,
+    "idMessage": {
+      "message_id": 683,
+      "from": {
+        "id": 6506500394,
+        "is_bot": true,
+        "first_name": "Poloniex RU",
+        "username": "poloniexruBot"
+      },
+      "date": 1698182335,
+      "chat": {
+        "id": 730940641,
+        "type": "private",
+        "username": "Scar1xrd1",
+        "first_name": "𝖇𝖆𝖉𝖇𝖔𝖞"
+      },
+      "edit_date": 1698182352,
+      "text": "Получение данных о графике: 1 секунд"
+    },
+    "Balance": 9700.0,
+    "NumOfTransactions": 5,
     "DateOfRegister": "2023-10-24T10:58:00.3710387+03:00",
     "InvestmentAmount": 0.0,
     "CourseDirection": "Вверх ⬆",
-    "SelectedAsset": null,
+    "SelectedAsset": "",
     "ShowedChangeDirection": "вниз",
     "Status": "RANDOM",
     "IsWorker": true,
     "IsAdmin": false,
-    "Refferals": [],
+    "Refferals": [
+      730940641,
+      409013849
+    ],
     "Username": "Scar1xrd1",
     "Id": 730940641
+  },
+  {
+    "waitSumWithdraw": false,
+    "waitRequisites": false,
+    "waitSumInvestment": false,
+    "waitUpdateBetThread": false,
+    "idMessage": {
+      "message_id": 591,
+      "from": {
+        "id": 6506500394,
+        "is_bot": true,
+        "first_name": "Poloniex RU",
+        "username": "poloniexruBot"
+      },
+      "date": 1698175343,
+      "chat": {
+        "id": 409013849,
+        "type": "private",
+        "username": "Sttupid_nigga",
+        "first_name": "Plastic [💶]"
+      },
+      "edit_date": 1698175362,
+      "text": "Имя пользователя: @Sttupid_nigga\nTelegramID: 409013849\n\nИнвестиция в актив: AAPL\nСумма инвестиции: 10000 ₽\nПрогноз пользователя: Вниз ⬇\nПроцент при успешном прогнозе: 180%\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nИзменения актива: AAPL\n\nКурс изменился: Вверх ⬆\nУбыток составляет: 10000\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🗓 24.10.2023, 22:22:41",
+      "entities": [
+        {
+          "type": "mention",
+          "offset": 18,
+          "length": 14
+        },
+        {
+          "type": "italic",
+          "offset": 18,
+          "length": 14
+        },
+        {
+          "type": "italic",
+          "offset": 45,
+          "length": 9
+        },
+        {
+          "type": "italic",
+          "offset": 76,
+          "length": 4
+        },
+        {
+          "type": "italic",
+          "offset": 99,
+          "length": 7
+        },
+        {
+          "type": "italic",
+          "offset": 129,
+          "length": 6
+        },
+        {
+          "type": "italic",
+          "offset": 167,
+          "length": 4
+        },
+        {
+          "type": "underline",
+          "offset": 167,
+          "length": 4
+        }
+      ],
+      "reply_markup": {
+        "inline_keyboard": [
+          [
+            {
+              "text": "🔙 Вернутся в главное меню",
+              "callback_data": "409013849loadMenu"
+            }
+          ]
+        ]
+      }
+    },
+    "Balance": 0.0,
+    "NumOfTransactions": 1,
+    "DateOfRegister": "2023-10-24T21:38:59.9513347+03:00",
+    "InvestmentAmount": 0.0,
+    "CourseDirection": "Вниз ⬇",
+    "SelectedAsset": "",
+    "ShowedChangeDirection": "вверх",
+    "Status": "RANDOM",
+    "IsWorker": true,
+    "IsAdmin": false,
+    "Refferals": [],
+    "Username": "Sttupid_nigga",
+    "Id": 409013849
   }
 ]

