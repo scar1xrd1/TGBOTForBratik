@@ -72,20 +72,21 @@ class TGBot
 
     private void SaveData()
     {
-        // КОД ПОФИКСИТЬ РАБОТА С ФАЙЛАМИ
-
         string filePath = Path.Combine(Environment.CurrentDirectory, "..\\..\\..\\Data/users.txt");
+        string data = JsonConvert.SerializeObject(users, Formatting.Indented);
 
         if (users == null) return;
 
-        using (FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Write))
-        { 
-            string data = JsonConvert.SerializeObject(users, Formatting.Indented);
-            byte[] dataBytes = Encoding.UTF8.GetBytes(data);
+        try { System.IO.File.WriteAllText(filePath, data); }
+        catch (Exception ex) { Console.WriteLine(ex.Message); }
 
-            if (data.Contains("]]")) fileStream.Write(dataBytes, 0, dataBytes.Length);
-            else fileStream.Write(dataBytes, 0, dataBytes.Length);
-        }
+        //using (FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Write))
+        //{             
+        //    byte[] dataBytes = Encoding.UTF8.GetBytes(data);
+
+        //    if (data.Contains("]]")) fileStream.Write(dataBytes, 0, dataBytes.Length);
+        //    else fileStream.Write(dataBytes, 0, dataBytes.Length);
+        //}
 
         //using (StreamWriter sw = new StreamWriter("Data/users.txt"))
         //{
@@ -177,25 +178,24 @@ class TGBot
                 if(!user.IsWorker)
                 {
                     inlineKeyboard = new(new[]{
-                new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", "createECNAccount") },
-                new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", "deposit") },
-                new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", "withdraw") },
-                new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", "techSupport") }
-            });
+                        new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", "createECNAccount") },
+                        new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", "deposit") },
+                        new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", "withdraw") },
+                        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", "techSupport") }
+                    });
                 }
                 else
                 {
                     inlineKeyboard = new(new[]{
-                new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", "createECNAccount") },
-                new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", "deposit") },
-                new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", "withdraw") },
-                new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", "techSupport") },
-                new [] { InlineKeyboardButton.WithCallbackData("Панель админа/работника", "workerAdminPanel") }
-            });
-                }
-                
+                        new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", "createECNAccount") },
+                        new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", "deposit") },
+                        new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", "withdraw") },
+                        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", "techSupport") },
+                        new [] { InlineKeyboardButton.WithCallbackData("Панель админа/работника", "workerAdminPanel") }
+                    });
+                }                
 
-                // ДОДЕЛАТЬ КОД! ЧЕРЕЗ ССЫЛКУ В СТАРТ ПЕРЕДАЕТСЯ АЙДИШНИК РЕФЕРАЛА! https://t.me/poloniexruBot?start={user.Id}
+                // ДОДЕЛАТЬ КОД! ЧЕРЕЗ ССЫЛКУ В СТАРТ ПЕРЕДАЕТСЯ АЙДИШНИК РЕФЕРАЛА! 
 
                 idMessage = await botClient.SendTextMessageAsync(
                     chatId: chatId,
@@ -340,11 +340,28 @@ class TGBot
                 DisableChecks();
 
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", "createECNAccount") },
-                new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", "deposit") },
-                new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", "withdraw") },
-                new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", "techSupport") }
-            });
+                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", callbackData: "loadMenu") }
+                });
+
+                if (!user.IsWorker)
+                {
+                    inlineKeyboard = new(new[]{
+                        new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", "createECNAccount") },
+                        new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", "deposit") },
+                        new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", "withdraw") },
+                        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", "techSupport") }
+                    });
+                }
+                else
+                {
+                    inlineKeyboard = new(new[]{
+                        new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", "createECNAccount") },
+                        new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", "deposit") },
+                        new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", "withdraw") },
+                        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", "techSupport") },
+                        new [] { InlineKeyboardButton.WithCallbackData("Панель админа/работника", "workerAdminPanel") }
+                    });
+                }                
 
                 if (idMessage != null)
                 {
@@ -551,7 +568,7 @@ class TGBot
                     parseMode: ParseMode.Html,
                     cancellationToken: cancellationToken);
             }
-            else if(type == "workerAdminPanel")
+            else if(type == "workerAdminPanel" && user.IsWorker)
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]
                 {                    
@@ -559,8 +576,16 @@ class TGBot
                     new[] { InlineKeyboardButton.WithCallbackData("🗂 Меню админа", "adminMenu") },
                     new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", "loadMenu") }
                 });
+
+                idMessage = await botClient.EditMessageTextAsync(
+                    chatId: idMessage.Chat.Id,
+                    messageId: idMessage.MessageId,
+                    text: "Выберите меню:",
+                    replyMarkup: inlineKeyboard,
+                    parseMode: ParseMode.Html,
+                    cancellationToken: cancellationToken);
             }
-            else if(type == "workerMenu")
+            else if(type == "workerMenu" && user.IsWorker)
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]
                 {
@@ -576,7 +601,21 @@ class TGBot
                     replyMarkup: inlineKeyboard,                    
                     cancellationToken: cancellationToken);
             }
-            else if(type == "additionalInfoRefferals")
+            else if(type == "controlRefferals" && user.IsWorker)
+            {
+                InlineKeyboardMarkup inlineKeyboard = new(new[]
+                {
+                    new[] { InlineKeyboardButton.WithCallbackData("Вернутся в меню работника", "workerMenu") },
+                });
+
+                idMessage = await botClient.EditMessageTextAsync(
+                    chatId: idMessage.Chat.Id,
+                    messageId: idMessage.MessageId,
+                    text: $"Ваши рефералы:\n\nТут рефералы\n\nВведите username или TgID, что-бы выбрать пользователя.\n(Можно скопировать нажатием)",
+                    replyMarkup: inlineKeyboard,
+                    cancellationToken: cancellationToken);
+            }
+            else if(type == "additionalInfoRefferals" && user.IsWorker)
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]
                 {
@@ -588,6 +627,7 @@ class TGBot
                     messageId: idMessage.MessageId,
                     text: $"Реферальная ссылка:\n<code>https://t.me/poloniexruBot?start={user.Id}</code>",
                     replyMarkup: inlineKeyboard,
+                    parseMode: ParseMode.Html,
                     cancellationToken: cancellationToken);
             }
         }

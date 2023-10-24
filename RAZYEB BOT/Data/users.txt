@@ -2,7 +2,7 @@
   {
     "Balance": 0.0,
     "NumOfTransactions": 0,
-    "DateOfRegister": "2023-10-24T00:22:31.1312182+03:00",
+    "DateOfRegister": "2023-10-24T10:58:00.3710387+03:00",
     "InvestmentAmount": 0.0,
     "CourseDirection": "Вверх ⬆",
     "SelectedAsset": null,
@@ -14,4 +14,4 @@
     "Username": "Scar1xrd1",
     "Id": 730940641
   }
-]]
+]
