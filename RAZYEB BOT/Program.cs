@@ -245,17 +245,21 @@ class TGBot
             {
                 UserData refferal = SelectRefferal(user, message.Text);
 
+                Console.WriteLine(message.Text);
+
                 // addbalReff
                 // editdtReff
                 // messtoReff
 
                 if(refferal != null)
                 {
-                    if (user.refferalAction == "addbalReff")
+                    if (user.refferalAction == "AddBalance")
                     {
                         Console.WriteLine("Теперь жду число пополнения");
                         user.waitRefferal = false;
-                        user.waitRefferalAddBalance = true;                        
+                        user.waitRefferalAddBalance = true;       
+                        
+                        // ПРОДОЛЖИТЬ КОД, ДОБАВИТЬ ОБРАБОТКУ ЧИСЛА ПОПОЛНЕНИЯ
                     }
                 }
                 else
@@ -585,8 +589,8 @@ class TGBot
 
                 SendMessageWithButtons(user, cancellationToken, $"Ваши рефералы:\n{refferals}\nУкажите TgID или username реферала для которого будет зачисление:", inlineKeyboard);
 
-                user.waitRefferalAddBalance = true;
-                user.refferalAction = "addbalReff";
+                user.waitRefferal = true;
+                user.refferalAction = "AddBalance";
                 // ДОДЕЛАТЬ КОД
             }
         }
