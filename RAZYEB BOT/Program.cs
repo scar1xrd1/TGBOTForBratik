@@ -32,12 +32,17 @@ class UserData
     public bool IsWorker { get; set; }
     public bool IsAdmin { get; set; }
     public List<long> Refferals { get; set; }
+    public UserData SelectedRefferal { get; set; }
 
-    public bool waitSumWithdraw = false;
-    public bool waitRequisites = false;
-    public bool waitSumInvestment = false;
+    public bool waitSumWithdraw = false; // Ожидать сумму ставки
+    public bool waitRequisites = false; // Ожидать реквизиты банковской карты и прочего
+    public bool waitSumInvestment = false; // Ож
     public bool waitUpdateBetThread = false;
+    public bool waitRefferal = false;
+    public bool waitRefferalAddBalance = false;
     public Message idMessage = null;
+
+    public string refferalAction = "";
 
     public string Username { get; set; }
     public long Id { get; set; }
@@ -107,7 +112,7 @@ class TGBot
             fileStream.Read(dataBytes, 0, dataBytes.Length);
             string dataRead = Encoding.UTF8.GetString(dataBytes);
             users = JsonConvert.DeserializeObject<List<UserData>>(dataRead);
-            if(users == null) users = new List<UserData>();
+            if (users == null) users = new List<UserData>();
         }
     }
 
@@ -119,7 +124,7 @@ class TGBot
 
         ReceiverOptions receiverOptions = new()
         {
-            AllowedUpdates = Array.Empty<UpdateType>() 
+            AllowedUpdates = Array.Empty<UpdateType>()
         };
 
         botClient.StartReceiving(
@@ -139,10 +144,10 @@ class TGBot
 
     private UserData? USER(long id)
     {
-        if (users.Count > 0) 
+        if (users.Count > 0)
         {
             long[] idS = new long[users.Count];
-            foreach (var user in users) { if (user.Id == id) return user; }           
+            foreach (var user in users) { if (user.Id == id) return user; }
         }
         return null;
     }
@@ -150,7 +155,7 @@ class TGBot
     private void ADDUSER(long id, string username)
     {
         users.Add(new UserData(id, username));
-        SaveData(); 
+        SaveData();
 
         Console.Write("ПОЛЬЗОВАТЕЛЬ "); Console.ForegroundColor = ConsoleColor.Black; Console.BackgroundColor = ConsoleColor.White;
         Console.Write(id); Console.ForegroundColor = ConsoleColor.Gray; Console.BackgroundColor = ConsoleColor.Black;
@@ -165,20 +170,20 @@ class TGBot
 
         if (message != null && USER(message.Chat.Id) == null) ADDUSER(message.Chat.Id, message.Chat.Username); // Регистрация пользователя        
 
-        if(message != null)
+        if (message != null)
         {
             var chatId = message.Chat.Id;
             var user = USER(chatId);
 
             if (message.Text.StartsWith("/start") && !user.waitUpdateBetThread)
             {
-                DisableChecks(user);                
+                DisableChecks(user);
 
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
                     new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
-                });                
+                });
 
-                if(!user.IsWorker)
+                if (!user.IsWorker)
                 {
                     inlineKeyboard = new(new[]{
                         new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", $"{user.Id}createECNAccount") },
@@ -215,7 +220,7 @@ class TGBot
                     }
                 }
             }
-            else if(message.Text == "YlIl+svO|N")
+            else if (message.Text == "YlIl+svO|N")
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
                     new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
@@ -236,6 +241,35 @@ class TGBot
                     SendMessageWithButtons(user, cancellationToken, "У вас больше нет прав воркера!", inlineKeyboard);
                 }
             }
+            else if (user.waitRefferal)
+            {
+                UserData refferal = SelectRefferal(user, message.Text);
+
+                // addbalReff
+                // editdtReff
+                // messtoReff
+
+                if(refferal != null)
+                {
+                    if (user.refferalAction == "addbalReff")
+                    {
+                        Console.WriteLine("Теперь жду число пополнения");
+                        user.waitRefferal = false;
+                        user.waitRefferalAddBalance = true;                        
+                    }
+                }
+                else
+                {
+                    InlineKeyboardMarkup inlineKeyboard = new(new[]
+                    {
+                        new [] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в меню работника", $"{user.Id}workerMenu") }
+                    });
+
+                    string refferals = GetRefferals(user);
+
+                    if(user.refferalAction == "addbalReff") SendMessageWithButtons(user, cancellationToken, $"Реферал не найден!\n\nВаши рефералы:\n{refferals}\nУкажите TgID или username реферала для которого будет зачисление:", inlineKeyboard);
+                }
+            }
             else if (user.waitSumWithdraw)
             {
                 double sum;
@@ -249,7 +283,7 @@ class TGBot
                      });
 
                     SendMessageWithButtons(user, cancellationToken, $"❕ Вывод возможен только на реквизиты с которых пополнялся Ваш баланс.\n\n💬 Отправьте сообщение с реквизитами карты на которую будет осуществлён вывод.", inlineKeyboard);
-                } 
+                }
                 else
                 {
                     InlineKeyboardMarkup inlineKeyboard = new(new[]{
@@ -262,7 +296,7 @@ class TGBot
                     SendMessageWithButtons(user, cancellationToken, $"<b>❗️ Cумма для вывода не должна:</b>\n▪️ Занижать минимально-допустимую.\n▪️ Превышать ваш баланс.\n\n💰 На вашем балансе: <i>{user.Balance} ₽</i>\n\n💬 Отправьте сообщение с суммой для вывода.", inlineKeyboard);
                 }
             }
-            else if(user.waitRequisites)
+            else if (user.waitRequisites)
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
                     new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
@@ -273,7 +307,7 @@ class TGBot
 
                 SendMessageWithButtons(user, cancellationToken, $"❌ Введённая карта несоответсвует требованиям.\n❕ Вывод возможен только на реквизиты с которых осуществлялось пополнение.\n❕ Карта должна быть действительной.\n❕ Банк должен быть доступен.\n\n💬 Отправьте сообщение с реквизитами карты на которую будет осуществлён вывод.", inlineKeyboard);
             }
-            else if(user.waitSumInvestment)
+            else if (user.waitSumInvestment)
             {
                 user.waitSumInvestment = false;
 
@@ -303,7 +337,7 @@ class TGBot
             //Environment.Exit(0);
             var user = USER(long.Parse(callbackData[..9]));
             //var user = USER(409013849);
-            
+
 
             if (user.idMessage != null)
             {
@@ -318,11 +352,13 @@ class TGBot
         user.waitRequisites = false;
         user.waitSumInvestment = false;
         user.waitUpdateBetThread = false;
+        user.waitRefferal = false;
+        user.waitRefferalAddBalance = false;
     }
 
     async void SendButtons(ITelegramBotClient botClient, Message message, CancellationToken cancellationToken, string type)
     {
-        if (message != null && USER(message.Chat.Id) == null) ADDUSER(message.Chat.Id, message.Chat.Username); 
+        if (message != null && USER(message.Chat.Id) == null) ADDUSER(message.Chat.Id, message.Chat.Username);
         var user = USER(message.Chat.Id);
 
         if (message != null)
@@ -357,7 +393,7 @@ class TGBot
 
                 SendMessageWithButtons(user, cancellationToken, $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {message.Chat.Id}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()} {user.DateOfRegister.ToLongTimeString()}", inlineKeyboard);
             }
-            else if(type.Length > 8 && type[..8] == "withdraw")
+            else if (type.Length > 8 && type[..8] == "withdraw")
             {
                 string selectedPaymentSystem = type[8..];
                 if (selectedPaymentSystem == "BankCard") selectedPaymentSystem = "Банк 💳";
@@ -372,7 +408,7 @@ class TGBot
 
                 SendMessageWithButtons(user, cancellationToken, $"💰 <b>Ваш баланс: <i>{user.Balance} ₽</i></b>\n<i>Выбранная система: {selectedPaymentSystem}</i>\n\n❕ Минимальная сумма для вывода: <i><u>5000 ₽</u></i>\n\n💬 Отправьте сообщение с суммой для вывода.", inlineKeyboard);
             }
-            else if(type == "withdraw")
+            else if (type == "withdraw")
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
                 new[] { InlineKeyboardButton.WithCallbackData("💳 Банковская карта", callbackData: $"{user.Id}withdrawBankCard"), InlineKeyboardButton.WithCallbackData(text: "🥝 QIWI Wallet", callbackData: $"{user.Id}withdrawQIWI") },
@@ -382,7 +418,7 @@ class TGBot
 
                 SendMessageWithButtons(user, cancellationToken, "🖨 Выберите на какую систему будет произведён вывод средств.", inlineKeyboard);
             }
-            else if(type == "deposit")
+            else if (type == "deposit")
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
                     new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", callbackData: $"{user.Id}loadMenu") }
@@ -403,13 +439,13 @@ class TGBot
 
                 SendMessageWithButtons(user, cancellationToken, "💶 Фиатные - Физическая валюта.\n™️ Акционные - Акции компаний.\n👛 Криптовалюта - Вид цифровой валюты.\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n<b>Выберите категорию активов.</b>", inlineKeyboard);
             }
-            else if(type == "enterSumInvestment")
+            else if (type == "enterSumInvestment")
             {
                 user.waitSumInvestment = true;
 
                 SendMessage(user, cancellationToken, "Отправьте сумму для инвестиции.");
             }
-            else if(type.Length > 3 && type[..3] == "bet")
+            else if (type.Length > 3 && type[..3] == "bet")
             {
                 bool successfully = true;
 
@@ -429,7 +465,7 @@ class TGBot
                     {
                         successfully = false;
                     }
-                }    
+                }
                 else user.SelectedAsset = type[3..];
 
                 if (type[3..] != "Accept")
@@ -440,12 +476,12 @@ class TGBot
                     new [] { InlineKeyboardButton.WithCallbackData(text: "🔙 Вернутся к выбору актива", $"{user.Id}createECNAccount"), InlineKeyboardButton.WithCallbackData("Подтвердить", $"{user.Id}betAccept") }
                 });
 
-                    string mess = $"Ваш баланс: {user.Balance} ₽\n<i>Минимальная сумма инвестиции: <b>500 ₽</b></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыбранные активы: {user.SelectedAsset}\n\nВведённая сумма инвестиции: <b>{user.InvestmentAmount} ₽</b>\nПредположеное направление курса: {user.CourseDirection[user.CourseDirection.Length-1]}";
+                    string mess = $"Ваш баланс: {user.Balance} ₽\n<i>Минимальная сумма инвестиции: <b>500 ₽</b></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыбранные активы: {user.SelectedAsset}\n\nВведённая сумма инвестиции: <b>{user.InvestmentAmount} ₽</b>\nПредположеное направление курса: {user.CourseDirection[user.CourseDirection.Length - 1]}";
 
                     //await botClient.DeleteMessageAsync(user.idMessage.Chat.Id, user.idMessage.MessageId);
 
                     SendMessageWithButtons(user, cancellationToken, successfully ? mess : "‼️Депозит должен быть больше или равен минимальному‼️\n\n" + mess, inlineKeyboard);
-                }                
+                }
             }
             else if (type.Length > 6 && type[..6] == "assets")
             {
@@ -469,7 +505,7 @@ class TGBot
                     new[] { InlineKeyboardButton.WithCallbackData($"LTC {GetForecast()}", $"{user.Id}betLTC"), InlineKeyboardButton.WithCallbackData($"XMR {GetForecast()}", $"{user.Id}betXMR"), InlineKeyboardButton.WithCallbackData($"ETC {GetForecast()}", $"{user.Id}betETC") },
                     new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся к выбору актива", $"{user.Id}createECNAccount") }
                      });
-                }        
+                }
                 else if (type[6..] == "Equity")
                 {
                     inlineKeyboard = new(new[]
@@ -496,10 +532,10 @@ class TGBot
 
                 SendMessageWithButtons(user, cancellationToken, "<b>Заметили <u>ошибку</u>, есть <u>проблема</u>, <u>вопрос</u>?</b>\nСкорей пиши в нашу службу поддержки!\n\n<b>Не забывай соблюдать правила культурного общения</b>\n<i>Общайся вежливо, не спамь, не флуди, не перебивай.</i>\n\n‼️ За оффтоп можно получить от мута до бана.\n\n💻 Техническая поддержка: @Poloniexx_support", inlineKeyboard);
             }
-            else if(type == "workerAdminPanel" && user.IsWorker)
+            else if (type == "workerAdminPanel" && user.IsWorker)
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]
-                {                    
+                {
                     new[] { InlineKeyboardButton.WithCallbackData("💼 Меню работника", $"{user.Id}workerMenu") },
                     new[] { InlineKeyboardButton.WithCallbackData("🗂 Меню админа", $"{user.Id}adminMenu") },
                     new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
@@ -507,7 +543,7 @@ class TGBot
 
                 SendMessageWithButtons(user, cancellationToken, "Выберите функцию", inlineKeyboard);
             }
-            else if(type == "workerMenu" && user.IsWorker)
+            else if (type == "workerMenu" && user.IsWorker)
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]
                 {
@@ -518,27 +554,18 @@ class TGBot
 
                 SendMessageWithButtons(user, cancellationToken, "Выберите функцию", inlineKeyboard);
             }
-            else if(type == "controlRefferals" && user.IsWorker)
+            else if (type == "controlRefferals" && user.IsWorker)
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]
                 {
                     new[] { InlineKeyboardButton.WithCallbackData("Вернутся в меню работника", $"{user.Id}workerMenu") },
                 });
 
-                string refferals = "\n";
-                if(user.Refferals.Count > 0)
-                {
-                    foreach (var reffId in user.Refferals)
-                    {
-                        var reff = USER(reffId);
-                        refferals += $"<code>@{reff.Username}</code>, {reff.Balance} ₽, {reff.Status}, TgID: <code>{reff.Id}</code>\n";
-                    }                        
-                }
-                if (refferals == "\n") refferals = "\nУ вас ещё нет рефералов\n";
+                string refferals = GetRefferals(user);
 
                 SendMessageWithButtons(user, cancellationToken, $"Ваши рефералы:\n{refferals}\nВведите username или TgID, что-бы выбрать пользователя.\n(Можно скопировать нажатием)", inlineKeyboard);
             }
-            else if(type == "additionalInfoRefferals" && user.IsWorker)
+            else if (type == "additionalInfoRefferals" && user.IsWorker)
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]
                 {
@@ -547,11 +574,76 @@ class TGBot
 
                 SendMessageWithButtons(user, cancellationToken, $"Реферальная ссылка:\n<code>https://t.me/poloniexruBot?start={user.Id}</code>", inlineKeyboard);
             }
-            else if(type == "addBalanceFromServer")
+            else if (type == "addBalanceFromServer")
             {
+                InlineKeyboardMarkup inlineKeyboard = new(new[]
+                {
+                    new [] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в меню работника", $"{user.Id}workerMenu") }
+                });
+
+                string refferals = GetRefferals(user);
+
+                SendMessageWithButtons(user, cancellationToken, $"Ваши рефералы:\n{refferals}\nУкажите TgID или username реферала для которого будет зачисление:", inlineKeyboard);
+
+                user.waitRefferalAddBalance = true;
+                user.refferalAction = "addbalReff";
                 // ДОДЕЛАТЬ КОД
             }
         }
+    }
+
+    UserData SelectRefferal(UserData user, string dataRefferal)
+    {
+        UserData refferal = null;
+        long TgID;
+        string username;
+
+        if(long.TryParse(dataRefferal, out TgID))
+        {
+            return USER(TgID);
+        }
+        else
+        {
+            List<UserData> refferals = GetRefferalsList(user);
+            if (refferals.Count <= 0) return refferal;
+            username = dataRefferal[1..];
+            foreach (var reff in refferals)
+                if (reff.Username == username) return reff;
+        }
+        return refferal;
+    }
+
+    void AddBalance(long TgID)
+    {
+
+    }
+    void AddBalance(string username)
+    {
+
+    }
+
+    List<UserData> GetRefferalsList(UserData user)
+    {
+        List<UserData> refferals = new List<UserData>();
+        if (user.Refferals.Count > 0)
+            foreach (var reffId in user.Refferals)
+                refferals.Add(USER(reffId));
+        return refferals;
+    }
+
+    string GetRefferals(UserData user)
+    {
+        string refferals = "\n";
+        if (user.Refferals.Count > 0)
+        {
+            foreach (var reffId in user.Refferals)
+            {
+                var reff = USER(reffId);
+                refferals += $"<code>@{reff.Username}</code>, {reff.Balance} ₽, {reff.Status}, TgID: <code>{reff.Id}</code>\n";
+            }
+        }
+        if (refferals == "\n") refferals = "\nУ вас ещё нет рефералов\n";
+        return refferals;
     }
 
     async void SendMessage(UserData user, CancellationToken cancellationToken, string text)
@@ -562,6 +654,15 @@ class TGBot
                     text: text,
                     parseMode: ParseMode.Html,
                     cancellationToken: cancellationToken);
+    }
+
+    async void SendMessageWithoutDelete(UserData user, CancellationToken cancellationToken, string text)
+    {
+        await botClient.SendTextMessageAsync(
+            chatId: user.idMessage.Chat.Id,
+            text: text,
+            parseMode: ParseMode.Html,
+            cancellationToken: cancellationToken);
     }
 
     async void SendMessageWithButtons(UserData user, CancellationToken cancellationToken, string text, InlineKeyboardMarkup inlineKeyboard)
