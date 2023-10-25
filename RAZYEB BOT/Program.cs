@@ -32,7 +32,7 @@ class UserData
     public bool IsWorker { get; set; }
     public bool IsAdmin { get; set; }
     public List<long> Refferals { get; set; }
-    public UserData SelectedRefferal { get; set; }
+    public long SelectedRefferal { get; set; }
 
     public bool waitSumWithdraw = false; // Ожидать сумму ставки
     public bool waitRequisites = false; // Ожидать реквизиты банковской карты и прочего
@@ -263,8 +263,8 @@ class TGBot
             else if (user.waitRefferal)
             {
                 UserData refferal = SelectRefferal(user, message.Text);
-
-                Console.WriteLine(message.Text);
+                
+                //Console.WriteLine(message.Text);
 
                 // addbalReff
                 // editdtReff
@@ -272,13 +272,27 @@ class TGBot
 
                 if(refferal != null)
                 {
+                    user.SelectedRefferal = refferal.Id;
+
                     if (user.refferalAction == "AddBalance")
                     {
-                        Console.WriteLine("Теперь жду число пополнения");
+                       // Console.WriteLine("Теперь жду число пополнения");
                         user.waitRefferal = false;
                         user.waitRefferalAddBalance = true;       
                         
                         // ПРОДОЛЖИТЬ КОД, ДОБАВИТЬ ОБРАБОТКУ ЧИСЛА ПОПОЛНЕНИЯ
+                    }
+                    else if(user.refferalAction == "controlRefferal")
+                    {
+                        InlineKeyboardMarkup inlineKeyboard = new(new[]
+                        {
+                            new [] { InlineKeyboardButton.WithCallbackData("Изменить баланс", $"{user.Id}changeBalanceRefferal")},
+                            new [] { InlineKeyboardButton.WithCallbackData("Блокировать/разблокировать вывод", $"{user.Id}blockWithdraw")},
+                            new [] { InlineKeyboardButton.WithCallbackData("LOSE", $"{user.Id}statusLOSE"), InlineKeyboardButton.WithCallbackData("RANDOM", $"{user.Id}statusRANDOM"), InlineKeyboardButton.WithCallbackData("WIN", $"{user.Id}statusWIN")},
+                            new [] { InlineKeyboardButton.WithCallbackData("Удалить реферала", $"{user.Id}deleteRefferal"), InlineKeyboardButton.WithCallbackData("🔙 Вернутся в меню работника", $"{user.Id}workerMenu") }
+                        });
+
+                        SendMessageWithButtons(user, cancellationToken, $"<b>Настройки реферала.</b>\n<i>Вы можете редактировать данные реферала, с помощью кнопок снизу.</i>\n\n<b><u>Данные реферала:</u></b>\nТег: <i>@{USER(user.SelectedRefferal).Username}</i>\nID: <i>{user.SelectedRefferal}</i>\nБаланс: <i>{USER(user.SelectedRefferal).Balance} ₽</i>\nКол-во сделок: <i>{USER(user.SelectedRefferal).NumOfTransactions}</i>\nСтатус: <i>{USER(user.SelectedRefferal).Status}</i>", inlineKeyboard);
                     }
                 }
                 else
@@ -290,7 +304,8 @@ class TGBot
 
                     string refferals = GetRefferals(user);
 
-                    if(user.refferalAction == "addbalReff") SendMessageWithButtons(user, cancellationToken, $"Реферал не найден!\n\nВаши рефералы:\n{refferals}\nУкажите TgID или username реферала для которого будет зачисление:", inlineKeyboard);
+                    if (user.refferalAction == "AddBalance") SendMessageWithButtons(user, cancellationToken, $"Реферал не найден!\n\nВаши рефералы:\n{refferals}\nУкажите TgID или username реферала для которого будет зачисление:", inlineKeyboard);
+                    else if(user.refferalAction == "controlRefferal") SendMessageWithButtons(user, cancellationToken, $"Реферал не найден!\n\nВаши рефералы:\n{refferals}\nВведите username или TgID, что-бы выбрать пользователя.\n(Можно скопировать нажатием)", inlineKeyboard);
                 }
             }
             else if (user.waitSumWithdraw)
@@ -334,7 +349,7 @@ class TGBot
             {
                 user.waitSumInvestment = false;
 
-                double sum;
+                double sum = 0;
                 if (double.TryParse(message.Text, out sum) && sum <= user.Balance && sum >= 500) user.InvestmentAmount = sum;
 
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
@@ -347,6 +362,7 @@ class TGBot
                 await botClient.DeleteMessageAsync(chatId, message.MessageId);
 
                 SendMessageWithButtons(user, cancellationToken, $"Ваш баланс: {user.Balance} ₽\n<i>Минимальная сумма инвестиции: <b>500 ₽</b></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыбранные активы: {user.SelectedAsset}\n\nВведённая сумма инвестиции: <b>{user.InvestmentAmount} ₽</b>\nПредположеное направление курса: {user.CourseDirection[user.CourseDirection.Length - 1]}", inlineKeyboard);
+                if (sum == 0) SendMessageWithoutDelete(user, cancellationToken, "Не хватает на балансе, или введенная сумма меньше 500 ₽");
             }
             else
             {
@@ -514,7 +530,8 @@ class TGBot
 
                     //await botClient.DeleteMessageAsync(user.idMessage.Chat.Id, user.idMessage.MessageId);
 
-                    SendMessageWithButtons(user, cancellationToken, successfully ? mess : "‼️Депозит должен быть больше или равен минимальному‼️\n\n" + mess, inlineKeyboard);
+                    SendMessageWithButtons(user, cancellationToken, mess, inlineKeyboard);
+                    if (!successfully) SendMessageWithoutDelete(user, cancellationToken, "Введенная сумма меньше 500 ₽");
                 }
             }
             else if (type.Length > 6 && type[..6] == "assets")
@@ -579,6 +596,8 @@ class TGBot
             }
             else if (type == "workerMenu" && user.IsWorker)
             {
+                DisableChecks(user);
+
                 InlineKeyboardMarkup inlineKeyboard = new(new[]
                 {
                     new[] { InlineKeyboardButton.WithCallbackData("Пополнить баланс от сервера", $"{user.Id}addBalanceFromServer"), InlineKeyboardButton.WithCallbackData("Сообщение от бота", $"{user.Id}messageFromBot") },
@@ -598,6 +617,9 @@ class TGBot
                 string refferals = GetRefferals(user);
 
                 SendMessageWithButtons(user, cancellationToken, $"Ваши рефералы:\n{refferals}\nВведите username или TgID, что-бы выбрать пользователя.\n(Можно скопировать нажатием)", inlineKeyboard);
+
+                user.waitRefferal = true;
+                user.refferalAction = "controlRefferal";
             }
             else if (type == "additionalInfoRefferals" && user.IsWorker)
             {
@@ -622,6 +644,31 @@ class TGBot
                 user.waitRefferal = true;
                 user.refferalAction = "AddBalance";
                 // ДОДЕЛАТЬ КОД
+            }
+            else if (type.Length > 6 && type[..6] == "status")
+            {
+                if(user.SelectedRefferal != null)
+                {
+                    if (type[6..] == "LOSE")
+                        USER(user.SelectedRefferal).Status = "LOSE";
+                    else if (type[6..] == "RANDOM")
+                        USER(user.SelectedRefferal).Status = "RANDOM";
+                    else
+                        USER(user.SelectedRefferal).Status = "WIN";
+
+                    //user.SelectedRefferal = USER(user.SelectedRefferal);
+                    SaveData();
+
+                    InlineKeyboardMarkup inlineKeyboard = new(new[]
+                    {
+                        new [] { InlineKeyboardButton.WithCallbackData("Изменить баланс", $"{user.Id}changeBalanceRefferal")},
+                        new [] { InlineKeyboardButton.WithCallbackData("Блокировать/разблокировать вывод", $"{user.Id}blockWithdraw")},
+                        new [] { InlineKeyboardButton.WithCallbackData("LOSE", $"{user.Id}statusLOSE"), InlineKeyboardButton.WithCallbackData("RANDOM", $"{user.Id}statusRANDOM"), InlineKeyboardButton.WithCallbackData("WIN", $"{user.Id}statusWIN")},
+                        new [] { InlineKeyboardButton.WithCallbackData("Удалить реферала", $"{user.Id}deleteRefferal"), InlineKeyboardButton.WithCallbackData("🔙 Вернутся в меню работника", $"{user.Id}workerMenu") }
+                    });
+
+                    SendMessageWithButtons(user, cancellationToken, $"<b>Настройки реферала.</b>\n<i>Вы можете редактировать данные реферала, с помощью кнопок снизу.</i>\n\n<b><u>Данные реферала:</u></b>\nТег: <i>@{USER(user.SelectedRefferal).Username}</i>\nID: <i>{user.SelectedRefferal}</i>\nБаланс: <i>{USER(user.SelectedRefferal).Balance} ₽</i>\nКол-во сделок: <i>{USER(user.SelectedRefferal).NumOfTransactions}</i>\nСтатус: <i>{USER(user.SelectedRefferal).Status}</i>", inlineKeyboard);
+                }              
             }
         }
     }
