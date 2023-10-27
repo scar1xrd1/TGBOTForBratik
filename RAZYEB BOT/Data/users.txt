@@ -9,42 +9,33 @@
     "waitRefferalSendMessage": false,
     "waitNewBalanceRefferal": false,
     "idMessage": {
-      "message_id": 1712,
+      "message_id": 1969,
       "from": {
         "id": 6506500394,
         "is_bot": true,
         "first_name": "Poloniex (RU)",
         "username": "poloniexruBot"
       },
-      "date": 1698440724,
+      "date": 1698445283,
       "chat": {
         "id": 730940641,
         "type": "private",
         "username": "Scar1xrd1",
         "first_name": "𝖇𝖆𝖉𝖇𝖔𝖞"
       },
-      "text": "❕ Вывод возможен только на реквизиты с которых пополнялся Ваш баланс.\n\n💬 Отправьте сообщение с реквизитами карты на которую будет осуществлён вывод.",
-      "reply_markup": {
-        "inline_keyboard": [
-          [
-            {
-              "text": "🔙 Вернутся в главное меню",
-              "callback_data": "730940641loadMenu"
-            }
-          ]
-        ]
-      }
+      "edit_date": 1698445298,
+      "text": "Получение данных о графике: 1 секунд"
     },
     "messageForRefferal": "ТЫ ГЕЙ 😲😲😲",
     "refferalAction": "AddBalance",
     "selectedPaymentSystem": "BankCard",
-    "Balance": 25334.0,
-    "NumOfTransactions": 3,
+    "Balance": 27334.0,
+    "NumOfTransactions": 8,
     "DateOfRegister": "2023-10-25T22:04:00.5086311+03:00",
     "InvestmentAmount": 0.0,
-    "CourseDirection": "Вверх ⬆",
+    "CourseDirection": "Вниз ⬇",
     "SelectedAsset": "",
-    "ShowedChangeDirection": "вниз",
+    "ShowedChangeDirection": "вверх",
     "Status": "WIN",
     "CanWithdraw": true,
     "SumWithdraw": 6666.0,
