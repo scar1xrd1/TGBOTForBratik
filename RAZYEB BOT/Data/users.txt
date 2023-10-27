@@ -4,126 +4,35 @@
     "waitRequisites": false,
     "waitSumInvestment": false,
     "waitUpdateBetThread": false,
-    "waitRefferal": true,
+    "waitRefferal": false,
     "waitRefferalAddBalance": false,
     "idMessage": {
-      "message_id": 961,
+      "message_id": 1121,
       "from": {
         "id": 6506500394,
         "is_bot": true,
         "first_name": "Poloniex (RU)",
         "username": "poloniexruBot"
       },
-      "date": 1698261428,
+      "date": 1698417485,
       "chat": {
         "id": 730940641,
         "type": "private",
         "username": "Scar1xrd1",
         "first_name": "𝖇𝖆𝖉𝖇𝖔𝖞"
       },
-      "text": "Настройки реферала.\nВы можете редактировать данные реферала, с помощью кнопок снизу.\n\nДанные реферала:\nТег: @Scar1xrd1\nID: 730940641\nБаланс: 0 ₽\nКол-во сделок: 0\nСтатус: WIN",
-      "entities": [
-        {
-          "type": "bold",
-          "offset": 0,
-          "length": 19
-        },
-        {
-          "type": "italic",
-          "offset": 20,
-          "length": 64
-        },
-        {
-          "type": "bold",
-          "offset": 86,
-          "length": 16
-        },
-        {
-          "type": "underline",
-          "offset": 86,
-          "length": 16
-        },
-        {
-          "type": "mention",
-          "offset": 108,
-          "length": 10
-        },
-        {
-          "type": "italic",
-          "offset": 108,
-          "length": 10
-        },
-        {
-          "type": "italic",
-          "offset": 123,
-          "length": 9
-        },
-        {
-          "type": "italic",
-          "offset": 141,
-          "length": 3
-        },
-        {
-          "type": "italic",
-          "offset": 160,
-          "length": 1
-        },
-        {
-          "type": "italic",
-          "offset": 170,
-          "length": 3
-        }
-      ],
-      "reply_markup": {
-        "inline_keyboard": [
-          [
-            {
-              "text": "Изменить баланс",
-              "callback_data": "730940641changeBalanceRefferal"
-            }
-          ],
-          [
-            {
-              "text": "Блокировать/разблокировать вывод",
-              "callback_data": "730940641blockWithdraw"
-            }
-          ],
-          [
-            {
-              "text": "LOSE",
-              "callback_data": "730940641statusLOSE"
-            },
-            {
-              "text": "RANDOM",
-              "callback_data": "730940641statusRANDOM"
-            },
-            {
-              "text": "WIN",
-              "callback_data": "730940641statusWIN"
-            }
-          ],
-          [
-            {
-              "text": "Удалить реферала",
-              "callback_data": "730940641deleteRefferal"
-            },
-            {
-              "text": "🔙 Вернутся в меню работника",
-              "callback_data": "730940641workerMenu"
-            }
-          ]
-        ]
-      }
+      "edit_date": 1698417504,
+      "text": "Получение данных о графике: 1 секунд"
     },
-    "refferalAction": "controlRefferal",
+    "refferalAction": "AddBalance",
     "Balance": 0.0,
-    "NumOfTransactions": 0,
+    "NumOfTransactions": 1,
     "DateOfRegister": "2023-10-25T22:04:00.5086311+03:00",
     "InvestmentAmount": 0.0,
     "CourseDirection": "Вниз ⬇",
     "SelectedAsset": "",
     "ShowedChangeDirection": "вверх",
-    "Status": "RANDOM",
+    "Status": "LOSE",
     "IsWorker": true,
     "IsAdmin": false,
     "Refferals": [
@@ -132,5 +41,29 @@
     "SelectedRefferal": 730940641,
     "Username": "Scar1xrd1",
     "Id": 730940641
+  },
+  {
+    "waitSumWithdraw": false,
+    "waitRequisites": false,
+    "waitSumInvestment": false,
+    "waitUpdateBetThread": false,
+    "waitRefferal": false,
+    "waitRefferalAddBalance": false,
+    "idMessage": null,
+    "refferalAction": "",
+    "Balance": 0.0,
+    "NumOfTransactions": 0,
+    "DateOfRegister": "2023-10-27T16:47:39.1430813+03:00",
+    "InvestmentAmount": 0.0,
+    "CourseDirection": "Вверх ⬆",
+    "SelectedAsset": null,
+    "ShowedChangeDirection": "вниз",
+    "Status": "RANDOM",
+    "IsWorker": false,
+    "IsAdmin": false,
+    "Refferals": [],
+    "SelectedRefferal": 0,
+    "Username": "Poloniexx_support",
+    "Id": 5282965731
   }
 ]

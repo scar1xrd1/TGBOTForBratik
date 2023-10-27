@@ -260,6 +260,27 @@ class TGBot
                     SendMessageWithButtons(user, cancellationToken, "У вас больше нет прав воркера!", inlineKeyboard);
                 }
             }
+            else if(user.waitRefferalAddBalance)
+            {
+                if (USER(user.SelectedRefferal) != null)
+                {
+                    double sumReplenishment;
+                    var refferal = USER(user.SelectedRefferal);
+                    user.waitRefferalAddBalance = false;
+
+                    if (double.TryParse(message.Text, out sumReplenishment) && sumReplenishment > 0)
+                    {                   
+                        refferal.Balance += sumReplenishment;
+                        SendMessageWithoutDelete(refferal, cancellationToken, $"💸 <b>На ваш баланс поступило пополнение.</b>\n💼 Сумма пополнения: <i>{sumReplenishment} ₽</i>");
+
+                        InlineKeyboardMarkup inlineKeyboard = new(new[]{
+                            new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
+                        });
+
+                        SendMessageWithButtons(user, cancellationToken, $"Вы пополнили баланс @{refferal.Username} на {sumReplenishment} рублей. Он получит уведомление.", inlineKeyboard);
+                    }
+                }
+            }
             else if (user.waitRefferal)
             {
                 UserData refferal = SelectRefferal(user, message.Text);
@@ -276,10 +297,14 @@ class TGBot
 
                     if (user.refferalAction == "AddBalance")
                     {
-                       // Console.WriteLine("Теперь жду число пополнения");
                         user.waitRefferal = false;
-                        user.waitRefferalAddBalance = true;       
-                        
+                        user.waitRefferalAddBalance = true;
+
+                        InlineKeyboardMarkup inlineKeyboard = new(new[]{
+                            new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
+                        });
+
+                        SendMessageWithButtons(user, cancellationToken, "Введите сумму пополнения от имени бота:", inlineKeyboard);
                         // ПРОДОЛЖИТЬ КОД, ДОБАВИТЬ ОБРАБОТКУ ЧИСЛА ПОПОЛНЕНИЯ
                     }
                     else if(user.refferalAction == "controlRefferal")
@@ -304,8 +329,8 @@ class TGBot
 
                     string refferals = GetRefferals(user);
 
-                    if (user.refferalAction == "AddBalance") SendMessageWithButtons(user, cancellationToken, $"Реферал не найден!\n\nВаши рефералы:\n{refferals}\nУкажите TgID или username реферала для которого будет зачисление:", inlineKeyboard);
-                    else if(user.refferalAction == "controlRefferal") SendMessageWithButtons(user, cancellationToken, $"Реферал не найден!\n\nВаши рефералы:\n{refferals}\nВведите username или TgID, что-бы выбрать пользователя.\n(Можно скопировать нажатием)", inlineKeyboard);
+                    if (user.refferalAction == "AddBalance"){ SendMessageWithButtons(user, cancellationToken, $"Реферал не найден!\n\nВаши рефералы:\n{refferals}\nУкажите TgID или username реферала для которого будет зачисление:", inlineKeyboard); }
+                    else if (user.refferalAction == "controlRefferal") SendMessageWithButtons(user, cancellationToken, $"Реферал не найден!\n\nВаши рефералы:\n{refferals}\nВведите username или TgID, что-бы выбрать пользователя.\n(Можно скопировать нажатием)", inlineKeyboard);
                 }
             }
             else if (user.waitSumWithdraw)
@@ -521,10 +546,10 @@ class TGBot
                 if (type[3..] != "Accept")
                 {
                     InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                    new [] { InlineKeyboardButton.WithCallbackData($"Актив пойдёт {user.ShowedChangeDirection}", $"{user.Id}betChangeDirection") },
-                    new [] { InlineKeyboardButton.WithCallbackData("Ввести сумму инвестиции", $"{user.Id}enterSumInvestment") },
-                    new [] { InlineKeyboardButton.WithCallbackData(text: "🔙 Вернутся к выбору актива", $"{user.Id}createECNAccount"), InlineKeyboardButton.WithCallbackData("Подтвердить", $"{user.Id}betAccept") }
-                });
+                        new [] { InlineKeyboardButton.WithCallbackData($"Актив пойдёт {user.ShowedChangeDirection}", $"{user.Id}betChangeDirection") },
+                        new [] { InlineKeyboardButton.WithCallbackData("Ввести сумму инвестиции", $"{user.Id}enterSumInvestment") },
+                        new [] { InlineKeyboardButton.WithCallbackData(text: "🔙 Вернутся к выбору актива", $"{user.Id}createECNAccount"), InlineKeyboardButton.WithCallbackData("Подтвердить", $"{user.Id}betAccept") }
+                    });
 
                     string mess = $"Ваш баланс: {user.Balance} ₽\n<i>Минимальная сумма инвестиции: <b>500 ₽</b></i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыбранные активы: {user.SelectedAsset}\n\nВведённая сумма инвестиции: <b>{user.InvestmentAmount} ₽</b>\nПредположеное направление курса: {user.CourseDirection[user.CourseDirection.Length - 1]}";
 
