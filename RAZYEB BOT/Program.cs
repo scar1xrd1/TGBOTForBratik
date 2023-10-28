@@ -94,7 +94,8 @@ class TGBot
 
     private void SaveData()
     {
-        string filePath = Path.Combine(Environment.CurrentDirectory, "..\\..\\..\\Data/users.txt");
+        //string filePath = Path.Combine(Environment.CurrentDirectory, "..\\..\\..\\Data/users.txt");
+        string filePath = Path.Combine(Environment.CurrentDirectory, "users.txt");
         string data = JsonConvert.SerializeObject(users, Formatting.Indented);
 
         if (users == null) return;
@@ -118,7 +119,15 @@ class TGBot
 
     private void LoadData()
     {
-        string filePath = Path.Combine(Environment.CurrentDirectory, "..\\..\\..\\Data/users.txt");
+        //string filePath = Path.Combine(Environment.CurrentDirectory, "..\\..\\..\\Data/users.txt");
+        string filePath = Path.Combine(Environment.CurrentDirectory, "users.txt");
+
+        if(!System.IO.File.Exists(filePath))
+        {
+            Console.WriteLine("Создание файлов, запустите бота ещё раз! Бот остановлен");
+            System.IO.File.Create(filePath);
+            Environment.Exit(0);
+        }
 
         using (FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
         {
@@ -206,7 +215,15 @@ class TGBot
                         new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддержка", $"{user.Id}techSupport") }
                     });
 
-                    SendPhotoMessageWithoutDeleteWithButtons(user, cancellationToken, $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {chatId}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()}   {user.DateOfRegister.ToLongTimeString()}", inlineKeyboard);
+                    user.idMessage = await botClient.SendPhotoAsync(
+                        chatId: message.Chat.Id,
+                        photo: InputFile.FromUri("https://s.yimg.com/ny/api/res/1.2/Y4QBbYSC_l3tpHp52N7h4g--/YXBwaWQ9aGlnaGxhbmRlcjt3PTk2MDtoPTU0MDtjZj13ZWJw/https://media.zenfs.com/en-US/the_block_83/f55892e039abe13fb4eda8fcbe50c16d"),
+                        caption: $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {chatId}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()}   {user.DateOfRegister.ToLongTimeString()}",
+                        replyMarkup: inlineKeyboard,
+                        parseMode: ParseMode.Html,
+                        cancellationToken: cancellationToken);
+
+                    //SendPhotoMessageWithoutDeleteWithButtons(user, cancellationToken, $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {chatId}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()}   {user.DateOfRegister.ToLongTimeString()}", inlineKeyboard);
                 }
                 else
                 {
@@ -785,7 +802,7 @@ class TGBot
                 //user.waitRefferal = true;
                 //user.refferalAction = "controlUser";
             }
-            else if(type == "adminMenu")
+            else if(type == "adminMenu" && user.IsAdmin)
             {
                 DisableChecks(user);
 
@@ -1040,7 +1057,14 @@ class TGBot
         {
             if (busyUsers.Contains(user.Id)) return;
 
-            if (user.idMessage == null) return;
+            if (user.idMessage == null)
+            {
+                user.idMessage = await botClient.SendTextMessageAsync(
+                        chatId: user.idMessage.Chat.Id,
+                        text: text,
+                        parseMode: ParseMode.Html,
+                        cancellationToken: cancellationToken);
+            }
             try { await botClient.DeleteMessageAsync(user.idMessage.Chat.Id, user.idMessage.MessageId); } catch { }
             user.idMessage = await botClient.SendTextMessageAsync(
                         chatId: user.idMessage.Chat.Id,
