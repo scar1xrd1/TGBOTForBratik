@@ -9,44 +9,132 @@
     "waitRefferalSendMessage": false,
     "waitNewBalanceRefferal": false,
     "idMessage": {
-      "message_id": 1969,
+      "message_id": 2204,
       "from": {
         "id": 6506500394,
         "is_bot": true,
         "first_name": "Poloniex (RU)",
         "username": "poloniexruBot"
       },
-      "date": 1698445283,
+      "date": 1698485580,
       "chat": {
         "id": 730940641,
         "type": "private",
         "username": "Scar1xrd1",
         "first_name": "𝖇𝖆𝖉𝖇𝖔𝖞"
       },
-      "edit_date": 1698445298,
+      "photo": [
+        {
+          "width": 90,
+          "height": 51,
+          "file_id": "AgACAgQAAxkDAAIInGU81Uy37614bqLMJ_uZw11O4MI3AAL4sTEbDDzkUX00SWNL4836AQADAgADcwADMAQ",
+          "file_unique_id": "AQAD-LExGww85FF4",
+          "file_size": 654
+        },
+        {
+          "width": 320,
+          "height": 180,
+          "file_id": "AgACAgQAAxkDAAIInGU81Uy37614bqLMJ_uZw11O4MI3AAL4sTEbDDzkUX00SWNL4836AQADAgADbQADMAQ",
+          "file_unique_id": "AQAD-LExGww85FFy",
+          "file_size": 8456
+        },
+        {
+          "width": 800,
+          "height": 450,
+          "file_id": "AgACAgQAAxkDAAIInGU81Uy37614bqLMJ_uZw11O4MI3AAL4sTEbDDzkUX00SWNL4836AQADAgADeAADMAQ",
+          "file_unique_id": "AQAD-LExGww85FF9",
+          "file_size": 36583
+        }
+      ],
+      "caption": "Ваш баланс: 900000 ₽\nМинимальная сумма инвестиции: 500 ₽\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nВыбранные активы: RUB\n\nВведённая сумма инвестиции: 500 ₽\nПредположеное направление курса: ⬇",
+      "caption_entities": [
+        {
+          "type": "italic",
+          "offset": 21,
+          "length": 30
+        },
+        {
+          "type": "bold",
+          "offset": 51,
+          "length": 5
+        },
+        {
+          "type": "italic",
+          "offset": 51,
+          "length": 5
+        },
+        {
+          "type": "bold",
+          "offset": 131,
+          "length": 5
+        }
+      ],
+      "reply_markup": {
+        "inline_keyboard": [
+          [
+            {
+              "text": "Актив пойдёт вверх",
+              "callback_data": "730940641betChangeDirection"
+            }
+          ],
+          [
+            {
+              "text": "Ввести сумму инвестиции",
+              "callback_data": "730940641enterSumInvestment"
+            }
+          ],
+          [
+            {
+              "text": "🔙 Вернутся к выбору актива",
+              "callback_data": "730940641createECNAccount"
+            },
+            {
+              "text": "Подтвердить",
+              "callback_data": "730940641betAccept"
+            }
+          ]
+        ]
+      }
+    },
+    "updateThreadMessage": {
+      "message_id": 2205,
+      "from": {
+        "id": 6506500394,
+        "is_bot": true,
+        "first_name": "Poloniex (RU)",
+        "username": "poloniexruBot"
+      },
+      "date": 1698485584,
+      "chat": {
+        "id": 730940641,
+        "type": "private",
+        "username": "Scar1xrd1",
+        "first_name": "𝖇𝖆𝖉𝖇𝖔𝖞"
+      },
+      "edit_date": 1698485600,
       "text": "Получение данных о графике: 1 секунд"
     },
-    "messageForRefferal": "ТЫ ГЕЙ 😲😲😲",
-    "refferalAction": "AddBalance",
+    "messageForRefferal": "Как дела? 😙",
+    "refferalAction": "sendMessageRefferal",
     "selectedPaymentSystem": "BankCard",
-    "Balance": 27334.0,
-    "NumOfTransactions": 8,
+    "Balance": 900400.0,
+    "NumOfTransactions": 19,
     "DateOfRegister": "2023-10-25T22:04:00.5086311+03:00",
     "InvestmentAmount": 0.0,
     "CourseDirection": "Вниз ⬇",
     "SelectedAsset": "",
     "ShowedChangeDirection": "вверх",
-    "Status": "WIN",
+    "Status": "RANDOM",
     "CanWithdraw": true,
     "SumWithdraw": 6666.0,
     "IsWorker": true,
-    "IsAdmin": false,
+    "IsAdmin": true,
     "Refferals": [
       730940641,
       409013849,
       1381882911
     ],
-    "SelectedRefferal": 730940641,
+    "SelectedRefferal": 1381882911,
     "Username": "Scar1xrd1",
     "Id": 730940641
   },
@@ -60,6 +148,7 @@
     "waitRefferalSendMessage": false,
     "waitNewBalanceRefferal": false,
     "idMessage": null,
+    "updateThreadMessage": null,
     "messageForRefferal": "",
     "refferalAction": "",
     "selectedPaymentSystem": "",
@@ -203,6 +292,7 @@
         ]
       }
     },
+    "updateThreadMessage": null,
     "messageForRefferal": "",
     "refferalAction": "controlRefferal",
     "selectedPaymentSystem": "",
@@ -305,6 +395,7 @@
         ]
       }
     },
+    "updateThreadMessage": null,
     "messageForRefferal": "",
     "refferalAction": "",
     "selectedPaymentSystem": "",
