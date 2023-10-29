@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -46,11 +47,15 @@ class UserData
     public bool waitRefferalAddBalance = false;
     public bool waitRefferalSendMessage = false;
     public bool waitNewBalanceRefferal = false;
+    public bool waitChangeRequisites = false;
+    public bool waitSendMessageWorkers = false;
     public Message idMessage = null;
     public Message updateThreadMessage = null;
     public string messageForRefferal = "";
+    public string messageForWorkers = "";
 
     public string refferalAction = "";
+    public string changeRequisitesAction = "";
     public string selectedPaymentSystem = "";
 
     public string Username { get; set; }
@@ -73,12 +78,25 @@ class UserData
     }
 }
 
+class RequisitesDeposit
+{
+    public string QIWICard { get; set; } = "Недоступно";
+    public string BankCard { get; set; } = "Недоступно";
+
+    public void ChangeRequisites(string which, string value)
+    {
+        if (which == "QIWI") QIWICard = value;
+        else if (which == "Bank") BankCard = value;
+    }
+}
+
 class TGBot
 {
     ITelegramBotClient botClient;
 
     Random random = new Random();
 
+    RequisitesDeposit requisitesDeposit;
     List<UserData> users;
     List<long> busyUsers = new List<long>();
 
@@ -89,42 +107,31 @@ class TGBot
     public TGBot()
     {
         LoadData();
+        LoadDataRequisites();
         // СОХРАНЕНИЕ ЗАГРУЗКА
     }
 
     private void SaveData()
     {
-        //string filePath = Path.Combine(Environment.CurrentDirectory, "..\\..\\..\\Data/users.txt");
-        string filePath = Path.Combine(Environment.CurrentDirectory, "users.txt");
+        string filePath = Path.Combine(Environment.CurrentDirectory, "Data/users.txt");
         string data = JsonConvert.SerializeObject(users, Formatting.Indented);
 
         if (users == null) return;
 
         try { System.IO.File.WriteAllText(filePath, data); }
         catch (Exception ex) { Console.WriteLine(ex.Message); }
-
-        //using (FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Write))
-        //{             
-        //    byte[] dataBytes = Encoding.UTF8.GetBytes(data);
-
-        //    if (data.Contains("]]")) fileStream.Write(dataBytes, 0, dataBytes.Length);
-        //    else fileStream.Write(dataBytes, 0, dataBytes.Length);
-        //}
-
-        //using (StreamWriter sw = new StreamWriter("Data/users.txt"))
-        //{
-        //    sw.WriteLine(JsonConvert.SerializeObject(users));
-        //}
     }
 
     private void LoadData()
     {
         //string filePath = Path.Combine(Environment.CurrentDirectory, "..\\..\\..\\Data/users.txt");
-        string filePath = Path.Combine(Environment.CurrentDirectory, "users.txt");
+        if (!Directory.Exists("Data")) Directory.CreateDirectory("Data");
+
+        string filePath = Path.Combine(Environment.CurrentDirectory, "Data/users.txt");
 
         if(!System.IO.File.Exists(filePath))
         {
-            Console.WriteLine("Создание файлов, запустите бота ещё раз! Бот остановлен");
+            Console.WriteLine("Создание файлов для пользователей, запустите бота ещё раз! Бот остановлен");
             System.IO.File.Create(filePath);
             Environment.Exit(0);
         }
@@ -136,6 +143,40 @@ class TGBot
             string dataRead = Encoding.UTF8.GetString(dataBytes);
             users = JsonConvert.DeserializeObject<List<UserData>>(dataRead);
             if (users == null) users = new List<UserData>();
+        }
+    }
+
+    private void SaveDataRequisites()
+    {
+        string filePath = Path.Combine(Environment.CurrentDirectory, "Data/requisites.txt");
+        string data = JsonConvert.SerializeObject(requisitesDeposit, Formatting.Indented);
+
+        if (users == null) return;
+
+        try { System.IO.File.WriteAllText(filePath, data); }
+        catch (Exception ex) { Console.WriteLine(ex.Message); }
+    }
+
+    private void LoadDataRequisites()
+    {
+        if (!Directory.Exists("Data")) Directory.CreateDirectory("Data");
+
+        string filePath = Path.Combine(Environment.CurrentDirectory, "Data/requisites.txt");
+
+        if (!System.IO.File.Exists(filePath))
+        {
+            Console.WriteLine("Создание файлов для реквизитов, запустите бота ещё раз! Бот остановлен\nБота в таких случать надо останавливать ибо во время создания файл занят другим процессом! И если попытаться запросить к нему доступ, то всё накроется. Поэтому лучше пару раз потыкать запуск бота, нежели потом словить его краш в процессе юзинга");
+            System.IO.File.Create(filePath);
+            Environment.Exit(0);
+        }
+
+        using (FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+        {
+            byte[] dataBytes = new byte[fileStream.Length];
+            fileStream.Read(dataBytes, 0, dataBytes.Length);
+            string dataRead = Encoding.UTF8.GetString(dataBytes);
+            requisitesDeposit = JsonConvert.DeserializeObject<RequisitesDeposit>(dataRead);
+            if (requisitesDeposit == null) requisitesDeposit = new RequisitesDeposit();
         }
     }
 
@@ -232,14 +273,15 @@ class TGBot
                     InlineKeyboardMarkup inlineKeyboard = new(new[]{
                         new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
                     });
-
-                    if (!user.IsWorker)
+                    
+                    if(user.IsAdmin || user.IsWorker)
                     {
                         inlineKeyboard = new(new[]{
                             new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", $"{user.Id}createECNAccount") },
                             new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", $"{user.Id}deposit") },
                             new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", $"{user.Id}withdraw") },
-                            new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддержка", $"{user.Id}techSupport") }
+                            new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддержка", $"{user.Id}techSupport") },
+                            new [] { InlineKeyboardButton.WithCallbackData("Панель админа/работника", $"{user.Id}workerAdminPanel") }
                         });
                     }
                     else
@@ -248,8 +290,7 @@ class TGBot
                             new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", $"{user.Id}createECNAccount") },
                             new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", $"{user.Id}deposit") },
                             new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", $"{user.Id}withdraw") },
-                            new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддержка", $"{user.Id}techSupport") },
-                            new [] { InlineKeyboardButton.WithCallbackData("Панель админа/работника", $"{user.Id}workerAdminPanel") }
+                            new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддержка", $"{user.Id}techSupport") }
                         });
                     }
 
@@ -354,6 +395,17 @@ class TGBot
 
                     SendMessageWithButtons(user, cancellationToken, $"Реферал: @{refferal.Username}\nТекст:\n\n{user.messageForRefferal}\n\nПодтвердить отправку?", inlineKeyboard);
                 }
+            }
+            else if(user.waitSendMessageWorkers)
+            {
+                user.waitSendMessageWorkers = false;
+                user.messageForWorkers = message.Text;
+
+                InlineKeyboardMarkup inlineKeyboard = new(new[]{
+                            new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в меню админа", $"{user.Id}adminMenu"), InlineKeyboardButton.WithCallbackData("☑️ Подтвердить", $"{user.Id}acceptSendMessageWorkers") }
+                        });
+
+                SendMessageWithButtons(user, cancellationToken, $"Текст:\n\n{user.messageForWorkers}\n\nПодтвердить отправку?", inlineKeyboard);
             }
             else if (user.waitRefferal)
             {
@@ -529,6 +581,26 @@ class TGBot
                 string withdraw = USER(user.SelectedRefferal).CanWithdraw ? "разрешен" : "запрещён";
                 SendMessageWithButtons(user, cancellationToken, $"<b>Настройки реферала.</b>\n<i>Вы можете редактировать данные реферала, с помощью кнопок снизу.</i>\n\n<b><u>Данные реферала:</u></b>\nТег: <i>@{USER(user.SelectedRefferal).Username}</i>\nID: <i>{user.SelectedRefferal}</i>\nБаланс: <i>{USER(user.SelectedRefferal).Balance} ₽</i>\nКол-во сделок: <i>{USER(user.SelectedRefferal).NumOfTransactions}</i>\nСтатус: <i>{USER(user.SelectedRefferal).Status}</i>\n<b>Вывод {withdraw}</b>", inlineKeyboard);
             }
+            else if(user.waitChangeRequisites)
+            {
+                InlineKeyboardMarkup inlineKeyboard = new(new[]
+                {
+                    new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в меню админа", $"{user.Id}adminMenu") }
+                });
+
+                if(user.changeRequisitesAction == "QIWI")
+                {
+                    requisitesDeposit.QIWICard = message.Text;
+                    SendMessageWithButtons(user, cancellationToken, $"Реквизит успешно изменён на <code>{message.Text}</code>", inlineKeyboard);
+                    SaveDataRequisites();
+                } 
+                else if(user.changeRequisitesAction == "Bank")
+                {
+                    requisitesDeposit.BankCard = message.Text;
+                    SendMessageWithButtons(user, cancellationToken, $"Реквизит успешно изменён на <code>{message.Text}</code>", inlineKeyboard);
+                    SaveDataRequisites();
+                }
+            }
             else
             {
                 await botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
@@ -546,7 +618,7 @@ class TGBot
             for (int i = 0; i < 20; i++)
             {
                 long id = 0;
-                if(long.TryParse(callbackData[..i], out id)) user = USER(id);
+                if(callbackData.Length > i && long.TryParse(callbackData[..i], out id)) user = USER(id);
                 if (user != null) { iId = i; break; }
             }
 
@@ -571,6 +643,8 @@ class TGBot
         user.waitRefferalAddBalance = false;
         user.waitRefferalSendMessage = false;
         user.waitNewBalanceRefferal = false;
+        user.waitChangeRequisites = false;
+        user.waitSendMessageWorkers = false;
     }
 
     async void SendButtons(ITelegramBotClient botClient, Message message, CancellationToken cancellationToken, string type)
@@ -590,16 +664,7 @@ class TGBot
                     new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", callbackData: $"{user.Id}loadMenu") }
                 });
 
-                if (!user.IsWorker)
-                {
-                    inlineKeyboard = new(new[]{
-                        new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", $"{user.Id}createECNAccount") },
-                        new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", $"{user.Id}deposit") },
-                        new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", $"{user.Id}withdraw") },
-                        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддержка", $"{user.Id}techSupport") }
-                    });
-                }
-                else
+                if (user.IsAdmin || user.IsWorker)
                 {
                     inlineKeyboard = new(new[]{
                         new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", $"{user.Id}createECNAccount") },
@@ -609,6 +674,15 @@ class TGBot
                         new [] { InlineKeyboardButton.WithCallbackData("Панель админа/работника", $"{user.Id}workerAdminPanel") }
                     });
                 }
+                else
+                {
+                    inlineKeyboard = new(new[]{
+                        new [] { InlineKeyboardButton.WithCallbackData("🧮 Открыть ECN счёт", $"{user.Id}createECNAccount") },
+                        new [] { InlineKeyboardButton.WithCallbackData("💳 Внести средства", $"{user.Id}deposit") },
+                        new [] { InlineKeyboardButton.WithCallbackData("🏦 Вывести средства", $"{user.Id}withdraw") },
+                        new [] { InlineKeyboardButton.WithUrl(text: "📒 Отзывы о нас", url: "https://crypto.ru/otzyvy-poloniex/"), InlineKeyboardButton.WithCallbackData("👨‍💻 Тех Поддержка", $"{user.Id}techSupport") }
+                    });
+                }               
 
                 SendPhotoMessageWithoutDeleteWithButtons(user, cancellationToken, $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {message.Chat.Id}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()}   {user.DateOfRegister.ToLongTimeString()}", inlineKeyboard);
             }
@@ -646,7 +720,7 @@ class TGBot
                     new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", callbackData: $"{user.Id}loadMenu") }
                 });
 
-                SendMessageWithButtons(user, cancellationToken, $"✅ Минимальная сумма пополнения: <i><u>5000 ₽</u></i>\n\n🥝 Номер карты для QIWI: <code>Недоступно</code> ( <i>До 10000 ₽</i> )\n💳 Номер карты для банка: <code>Недоступно</code>\n\n📝 Комментарий при переводе: <code>@{user.Username}</code>\n\n❕ Пополнение доступно для жителей Беларуси, через техническую поддержку ( @Poloniexx_support ).\n\n❕ Если нет возможности оставить комментарий или Вы ошиблись с указанием комментария, отправьте чек в техническую поддержку ( @Poloniexx_support ).\n\n✳️ Средства пополняются автоматически, время обработки до 5 минут.", inlineKeyboard);
+                SendMessageWithButtons(user, cancellationToken, $"✅ Минимальная сумма пополнения: <i><u>5000 ₽</u></i>\n\n🥝 Номер карты для QIWI: <code>{requisitesDeposit.QIWICard}</code> ( <i>До 10000 ₽</i> )\n💳 Номер карты для банка: <code>{requisitesDeposit.BankCard}</code>\n\n📝 Комментарий при переводе: <code>@{user.Username}</code>\n\n❕ Пополнение доступно для жителей Беларуси, через техническую поддержку ( @Poloniexx_support ).\n\n❕ Если нет возможности оставить комментарий или Вы ошиблись с указанием комментария, отправьте чек в техническую поддержку ( @Poloniexx_support ).\n\n✳️ Средства пополняются автоматически, время обработки до 5 минут.", inlineKeyboard);
             }
             else if (type == "createECNAccount")
             {
@@ -765,18 +839,21 @@ class TGBot
 
                 SendPhotoMessageWithButtons(user, cancellationToken, "<b>Заметили <u>ошибку</u>, есть <u>проблема</u>, <u>вопрос</u>?</b>\nСкорей пиши в нашу службу поддержки!\n\n<b>Не забывай соблюдать правила культурного общения</b>\n<i>Общайся вежливо, не спамь, не флуди, не перебивай.</i>\n\n‼️ За оффтоп можно получить от мута до бана.\n\n💻 Техническая поддержка: @Poloniexx_support", inlineKeyboard);
             }
-            else if (type == "workerAdminPanel" && user.IsWorker)
+            else if (type == "workerAdminPanel")
             {
-                InlineKeyboardMarkup inlineKeyboard = new(new[]
+                if (user.IsWorker || user.IsAdmin)
                 {
-                    new[] { InlineKeyboardButton.WithCallbackData("💼 Меню работника", $"{user.Id}workerMenu") },
-                    new[] { InlineKeyboardButton.WithCallbackData("🗂 Меню админа", $"{user.Id}adminMenu") },
-                    new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
-                });
+                    InlineKeyboardMarkup inlineKeyboard = new(new[]
+                    {
+                        new[] { InlineKeyboardButton.WithCallbackData("💼 Меню работника", $"{user.Id}workerMenu") },
+                        new[] { InlineKeyboardButton.WithCallbackData("🗂 Меню админа", $"{user.Id}adminMenu") },
+                        new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
+                    });
 
-                SendMessageWithButtons(user, cancellationToken, "Выберите функцию", inlineKeyboard);
+                    SendMessageWithButtons(user, cancellationToken, "Выберите функцию", inlineKeyboard);
+                }
             }
-            else if(type == "listWorkers")
+            else if (type == "listWorkers")
             {
                 var workers = FindWorkers();
                 string workersRefferals = GetWorkersRefferals(workers);
@@ -788,7 +865,7 @@ class TGBot
 
                 SendMessageWithButtons(user, cancellationToken, $"Информация о воркерах и их рефералах:\n\n{workersRefferals}", inlineKeyboard);
             }
-            else if(type == "listUsers")
+            else if (type == "listUsers")
             {
                 string allUsers = GetAllUsers();
 
@@ -802,6 +879,47 @@ class TGBot
                 //user.waitRefferal = true;
                 //user.refferalAction = "controlUser";
             }
+            else if (type.Length > 16 && type[..16] == "changeRequisites")
+            {
+                InlineKeyboardMarkup inlineKeyboardBackToMenuAdmin = new(new[]
+                {
+                    new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в меню админа", $"{user.Id}adminMenu") }
+                });
+
+                if (type[16..] == "Deposit")
+                {
+                    InlineKeyboardMarkup inlineKeyboard = new(new[]
+                    {
+                        new[] { InlineKeyboardButton.WithCallbackData("🥝 QIWI", $"{user.Id}changeRequisitesQIWI"), InlineKeyboardButton.WithCallbackData("💳 Банк", $"{user.Id}changeRequisitesBank") },
+                        new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в меню админа", $"{user.Id}adminMenu") }
+                    });
+
+                    SendMessageWithButtons(user, cancellationToken, "Выберите какие реквизиты хотите изменить", inlineKeyboard);
+                }
+                else if (type[16..] == "QIWI")
+                {
+                    SendMessageWithButtons(user, cancellationToken, $"Текущие реквизиты QIWI:\n<code>{requisitesDeposit.QIWICard}</code>\n\nВведите новые реквизиты:", inlineKeyboardBackToMenuAdmin);
+                    user.waitChangeRequisites = true;
+                    user.changeRequisitesAction = "QIWI";
+                } 
+                else if (type[16..] == "Bank")
+                {
+                    SendMessageWithButtons(user, cancellationToken, $"Текущие реквизиты банка:\n<code>{requisitesDeposit.BankCard}</code>\n\nВведите новые реквизиты:", inlineKeyboardBackToMenuAdmin);
+                    user.waitChangeRequisites = true;
+                    user.changeRequisitesAction = "Bank";
+                }
+            }
+            else if(type == "sendMessageWorkers")
+            {
+                InlineKeyboardMarkup inlineKeyboard = new(new[]
+                {
+                    new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в меню админа", $"{user.Id}adminMenu") },
+                });
+
+                SendMessageWithButtons(user, cancellationToken, $"Введите сообщение которое придёт всем воркерам\n(Поддерживаются смайлы)", inlineKeyboard);
+
+                user.waitSendMessageWorkers = true;
+            }
             else if(type == "adminMenu" && user.IsAdmin)
             {
                 DisableChecks(user);
@@ -809,7 +927,9 @@ class TGBot
                 InlineKeyboardMarkup inlineKeyboard = new(new[]
                 {
                     new[] { InlineKeyboardButton.WithCallbackData("Список воркеров", $"{user.Id}listWorkers"), InlineKeyboardButton.WithCallbackData("Список пользователей", $"{user.Id}listUsers") },
-                    new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся к выбору меню", $"{user.Id}workerAdminPanel") }
+                    new[] { InlineKeyboardButton.WithCallbackData("Изменить реквизиты на депозит", $"{user.Id}changeRequisitesDeposit")},
+                    new[] { InlineKeyboardButton.WithCallbackData("Отправить сообщение от бота воркерам", $"{user.Id}sendMessageWorkers")},
+                    new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся к выбору меню", $"{user.Id}workerAdminPanel") }
                 });
 
                 SendMessageWithButtons(user, cancellationToken, "Выберите функцию", inlineKeyboard);
@@ -963,6 +1083,21 @@ class TGBot
 
                 SendMessageWithButtons(user, cancellationToken, "Сообщение успешно отправлено!", inlineKeyboard);
                 if(USER(user.SelectedRefferal) != null) SendMessageWithoutDelete(USER(user.SelectedRefferal), cancellationToken, user.messageForRefferal);
+            }
+            else if(type == "acceptSendMessageWorkers")
+            {
+                InlineKeyboardMarkup inlineKeyboard = new(new[]
+                {
+                    new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в меню админа", $"{user.Id}adminMenu") }
+                });
+
+                SendMessageWithButtons(user, cancellationToken, "Сообщение успешно отправлено!", inlineKeyboard);
+
+                foreach(var _user in users)
+                {
+                    if (_user.IsWorker)
+                        SendMessageWithoutDelete(_user, cancellationToken, user.messageForWorkers);
+                }
             }
         }
     }
