@@ -103,6 +103,7 @@ class TGBot
     string QIWICARD = "79258502917";
     string BANKCARD = "4539545676497148";
     string BELARUSBANKCARD = "123456789123";
+    string CRYPTOCARD = "bc4qjudat3az8lsme8wzcyy5s26ve3xqcymr4l4l8y";
 
     public TGBot()
     {
@@ -263,7 +264,7 @@ class TGBot
                         replyMarkup: inlineKeyboard,
                         parseMode: ParseMode.Html,
                         cancellationToken: cancellationToken);
-
+                    SaveData();
                     //SendPhotoMessageWithoutDeleteWithButtons(user, cancellationToken, $"👤Личный кабинет: @{message.Chat.Username}\n<i>🔎 TlgmID: {chatId}</i>\n\n💰 Баланс: <i>{user.Balance} ₽</i>\n🤝🏻 Кол-во сделок: <i>{user.NumOfTransactions}</i>\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\nRUB 🟢 ➗    KZT  🟢 ➗    UAH 🟢\nUSD 🟢 ➗    EUR  🟢 ➗    PLN  🟢\n🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰\n🔸 C нами уже более 10⁷ пользователей 🔸\n\n📅 Дата регистрации: {user.DateOfRegister.ToLongDateString()}   {user.DateOfRegister.ToLongTimeString()}", inlineKeyboard);
                 }
                 else
@@ -306,7 +307,7 @@ class TGBot
                     {
                         yourRefferalData.Refferals.Add(user.Id);
 
-                        SendMessage(yourRefferalData, cancellationToken, $"Теперь вы реферал пользователя @{user.Username}");
+                        SendMessage(yourRefferalData, cancellationToken, $"Теперь ваш реферал @{user.Username}");
 
                         SaveData();
                     }
@@ -487,7 +488,8 @@ class TGBot
                     new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") }
                      });
 
-                    SendPhotoMessageWithButtons(user, cancellationToken, $"❕ Вывод возможен только на реквизиты с которых пополнялся Ваш баланс.\n\n💬 Отправьте сообщение с реквизитами карты на которую будет осуществлён вывод.", inlineKeyboard);
+                    if(user.selectedPaymentSystem != "Crypto") SendPhotoMessageWithButtons(user, cancellationToken, $"❕ Вывод возможен только на реквизиты с которых пополнялся Ваш баланс.\n\n💬 Отправьте сообщение с реквизитами карты на которую будет осуществлён вывод.", inlineKeyboard);
+                    else SendPhotoMessageWithButtons(user, cancellationToken, $"🪙 Отправьте адрес вашего криптокошелька", inlineKeyboard);
                 }
                 else
                 {
@@ -518,17 +520,22 @@ class TGBot
 
                     if (user.selectedPaymentSystem == "QIWI" && requisites == QIWICARD ||
                         user.selectedPaymentSystem == "BankCard" && requisites == BANKCARD ||
-                        user.selectedPaymentSystem == "BelarussianCard" && requisites == BELARUSBANKCARD)
+                        user.selectedPaymentSystem == "BelarussianCard" && requisites == BELARUSBANKCARD ||
+                        user.selectedPaymentSystem == "Crypto" && requisites == CRYPTOCARD)
                     {
                         user.waitRequisites = false;
                         user.Balance -= user.SumWithdraw;
 
-                        SendMessageWithButtons(user, cancellationToken, "✅ <b>Транзакция ушла в обработку.</b>\n⏳ <i>Средства поступят в течении 10 минут.</i>", inlineKeyboard);
+                        if(user.selectedPaymentSystem != "Crypto") SendMessageWithButtons(user, cancellationToken, "✅ <b>Транзакция ушла в обработку.</b>\n⏳ <i>Средства поступят в течении 10 минут.</i>", inlineKeyboard);
+                        else SendMessageWithButtons(user, cancellationToken, "✅ <b>Средства поступят к вам на адрес в течении 5 минут.</b> <i>Спасибо!</i>", inlineKeyboard);
 
                         var yourReffs = FindRefferals(user);
 
                         foreach (var reff in yourReffs)
-                            SendMessageWithoutDelete(reff, cancellationToken, $"Реферал: @{user.Username}\nУспешно совершил вывод\nСумма: {user.SumWithdraw}");
+                        {
+                            if (user.selectedPaymentSystem != "Crypto") SendMessageWithoutDelete(reff, cancellationToken, $"Реферал: @{user.Username}\nУспешно совершил вывод\nСумма: {user.SumWithdraw}");
+                            else SendMessageWithoutDelete(reff, cancellationToken, $"Реферал: @{user.Username}\nУспешно совершил вывод на криптокошелек\nСумма: {user.SumWithdraw}");
+                        }                           
 
                         SaveData();
                     }                        
@@ -694,7 +701,8 @@ class TGBot
 
                 if (selectedPaymentSystem == "BankCard") selectedPaymentSystem = "Банк 💳";
                 else if (selectedPaymentSystem == "QIWI") selectedPaymentSystem = "QIWI 🥝";
-                else selectedPaymentSystem = "Банк 🇧🇾";
+                else if (selectedPaymentSystem == "BelarussianCard") selectedPaymentSystem = "Банк 🇧🇾";
+                else if (selectedPaymentSystem == "Crypto") selectedPaymentSystem = "Криптокошелёк 🪙";
 
                 user.waitSumWithdraw = true;
 
@@ -708,19 +716,39 @@ class TGBot
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]{
                     new[] { InlineKeyboardButton.WithCallbackData("💳 Банковская карта", callbackData: $"{user.Id}withdrawBankCard"), InlineKeyboardButton.WithCallbackData(text: "🥝 QIWI Wallet", callbackData: $"{user.Id}withdrawQIWI") },
-                    new[] {InlineKeyboardButton.WithCallbackData(text: "🇧🇾 Беларусская карта", $"{user.Id}withdrawBelarussianCard") },
+                    new[] {InlineKeyboardButton.WithCallbackData("🇧🇾 Беларусская карта", $"{user.Id}withdrawBelarussianCard") },
+                    new[] {InlineKeyboardButton.WithCallbackData("🪙 Криптокошелек", $"{user.Id}withdrawCrypto") },
                     new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", callbackData: $"{user.Id}loadMenu") }
                 });
 
                 SendPhotoMessageWithButtons(user, cancellationToken, "🖨 Выберите на какую систему будет произведён вывод средств.", inlineKeyboard);
             }
-            else if (type == "deposit")
+            else if (type.Length >= 7 && type[..7] == "deposit")
             {
-                InlineKeyboardMarkup inlineKeyboard = new(new[]{
+                
+
+                InlineKeyboardMarkup inlineKeyboardMenu = new(new[]{
                     new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", callbackData: $"{user.Id}loadMenu") }
                 });
 
-                SendMessageWithButtons(user, cancellationToken, $"✅ Минимальная сумма пополнения: <i><u>5000 ₽</u></i>\n\n🥝 Номер карты для QIWI: <code>{requisitesDeposit.QIWICard}</code> ( <i>До 10000 ₽</i> )\n💳 Номер карты для банка: <code>{requisitesDeposit.BankCard}</code>\n\n📝 Комментарий при переводе: <code>@{user.Username}</code>\n\n❕ Пополнение доступно для жителей Беларуси, через техническую поддержку ( @Poloniexx_support ).\n\n❕ Если нет возможности оставить комментарий или Вы ошиблись с указанием комментария, отправьте чек в техническую поддержку ( @Poloniexx_support ).\n\n✳️ Средства пополняются автоматически, время обработки до 5 минут.", inlineKeyboard);
+                if (type.Length > 7 && type[7..] == "Standard")
+                {
+                    SendMessageWithButtons(user, cancellationToken, $"✅ Минимальная сумма пополнения: <i><u>5000 ₽</u></i>\n\n🥝 Номер карты для QIWI: <code>{requisitesDeposit.QIWICard}</code> ( <i>До 10000 ₽</i> )\n💳 Номер карты для банка: <code>{requisitesDeposit.BankCard}</code>\n\n📝 Комментарий при переводе: <code>@{user.Username}</code>\n\n❕ Пополнение доступно для жителей Беларуси, через техническую поддержку ( @Poloniexx_support ).\n\n❕ Если нет возможности оставить комментарий или Вы ошиблись с указанием комментария, отправьте чек в техническую поддержку ( @Poloniexx_support ).\n\n✳️ Средства пополняются автоматически, время обработки до 5 минут.", inlineKeyboardMenu);
+                }
+                else if (type.Length > 7 && type[7..] == "Crypto")
+                {
+                    //Console.WriteLine($"{type.Length} {type[7..]}");
+                    SendMessageWithButtons(user, cancellationToken, $"✅ Минимальная сумма пополнения:\n<i>0,0016 BTC - 53,99 USDT - 0,030 ETH\n0,24 BNB - 780,32 DOGE - 0,78 LTC</i>\n\n📥 Адреса для пополнения:\n\n🪙BTC -  <code>bc1qjudat3az8lsme8wzcyy5s26ve3xqcymr4l4l8y</code>\n🪙USDT - <code>0x043dA82D39DB05720DD0624CD18d91bE131a4c48</code>\n🪙ETH - <code>0x043dA82D39DB05720DD0624CD18d91bE131a4c48</code>\n🪙BNB - <code>bnb13a60m70w6fgl2c6usc7652yml7dk6v4cjrm9nt</code>\n🪙DOGE - <code>DLB5aujj2Lj6r2NPftFvfWFDM5Mh5LCoX1</code>\n🪙LTC - <code>ltc1q3ffqapg5p4unr8h9hgsjrkcjdmmd05hvc59xd6</code>\n\n📝 После успешного перевода средства конвертируются и поступят на ваш счет в течении 5 минут.\n\n❕ В случае проблем с пополнением обратитесь в тех поддержку: @Poloniexx_support.", inlineKeyboardMenu);
+                }
+                else
+                {
+                    InlineKeyboardMarkup inlineKeyboard = new(new[]{
+                        new[] {InlineKeyboardButton.WithCallbackData("💳 Банк", $"{user.Id}depositStandard"), InlineKeyboardButton.WithCallbackData("🪙 Криптокошелек", $"{user.Id}depositCrypto") },
+                        new[] {InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", callbackData: $"{user.Id}loadMenu") }
+                    });
+
+                    SendPhotoMessageWithButtons(user, cancellationToken, "Выберите способ пополнения", inlineKeyboard);
+                }
             }
             else if (type == "createECNAccount")
             {
@@ -1001,7 +1029,7 @@ class TGBot
             }
             else if(type == "deleteRefferal")
             {
-                if (user.SelectedRefferal != null)
+                if (user.SelectedRefferal != 0)
                 {
                     user.Refferals.Remove(user.SelectedRefferal);
                     user.SelectedRefferal = 0;
@@ -1023,7 +1051,7 @@ class TGBot
             }
             else if (type.Length > 6 && type[..6] == "status")
             {
-                if(user.SelectedRefferal != null)
+                if(user.SelectedRefferal != 0)
                 {
                     if (type[6..] == "LOSE")
                         USER(user.SelectedRefferal).Status = "LOSE";
@@ -1242,6 +1270,7 @@ class TGBot
                         cancellationToken: cancellationToken);
         }
         catch { }
+        finally { SaveData(); }
     }
 
     async void SendPhotoMessageWithButtons(UserData user, CancellationToken cancellationToken, string text, InlineKeyboardMarkup inlineKeyboard)
@@ -1262,6 +1291,7 @@ class TGBot
                     cancellationToken: cancellationToken);
         }
         catch { }
+        finally { SaveData(); }
     }
     
     async void SendPhotoMessageWithoutDeleteWithButtons(UserData user, CancellationToken cancellationToken, string text, InlineKeyboardMarkup inlineKeyboard)
@@ -1281,6 +1311,10 @@ class TGBot
                     cancellationToken: cancellationToken);
         }
         catch { }
+        finally
+        {
+            SaveData();
+        }
     }
 
     async void UpdateMessageBet(CancellationToken cancellationToken, UserData user)
@@ -1356,7 +1390,7 @@ class TGBot
         List<UserData> result = new List<UserData>();
 
         foreach(var reff in users)
-            if (reff.Refferals.Contains(user.Id)) result.Add(reff);
+            if (user.Refferals.Contains(reff.Id)) result.Add(reff);
 
         return result;
     }
