@@ -92,7 +92,7 @@ public class UserData
     public string Username { get; set; }
     public double Balance { get; set; }
     public int NumOfTransactions { get; set; }
-    public DateTime DateOfRegister { get; set; }
+    public DateTime DateOfRegister { get; set; } = DateTime.Now;
     public double InvestmentAmount { get; set; }
     public string CourseDirection { get; set; } = "Вверх ⬆";
     public string SelectedAsset { get; set; }
@@ -243,6 +243,10 @@ class TGBot
         {
             Console.WriteLine($"Id: {userData.Id}, Username: {userData.Username}, Balance: {userData.Balance}");
         }
+
+        if(users != null)
+            foreach (var user in users)
+                if (user.DateOfRegister == DateTime.MinValue) user.DateOfRegister = DateTime.Now;
     }
 
     private void SaveDataRequisites()
@@ -768,6 +772,8 @@ class TGBot
         user.waitNewBalanceRefferal = false;
         user.waitChangeRequisites = false;
         user.waitSendMessageWorkers = false;
+        user.CourseDirection = "Вверх ⬆";
+        user.ShowedChangeDirection = "вниз";
     }
 
     async void SendButtons(ITelegramBotClient botClient, Message message, CancellationToken cancellationToken, string type)
@@ -936,6 +942,8 @@ class TGBot
             }
             else if (type.Length > 6 && type[..6] == "assets")
             {
+                DisableChecks(user);
+
                 InlineKeyboardMarkup inlineKeyboard = new(new[] { new[] { InlineKeyboardButton.WithCallbackData("🔙 Вернутся в главное меню", $"{user.Id}loadMenu") } });
 
                 if (type[6..] == "Fiat")
@@ -1326,7 +1334,7 @@ class TGBot
         foreach (var user in users)
         {
             string workerChiNe = user.IsWorker ? "Воркер" : "Салага";
-            result += $"Пользователь <code>@{user.Username}</code> {workerChiNe}\n";
+            result += $"<code>{user.Id}</code> <code>@{user.Username}</code> {workerChiNe}\n";
         }
 
         return result == "" ? "Пользователей нет" : result;
