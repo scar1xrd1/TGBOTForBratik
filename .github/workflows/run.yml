@@ -15,5 +15,5 @@ jobs:
         with:
           dotnet-version: '6.0.x'
 
-      - run: dotnet restore
-      - run: dotnet run
+      - run: dotnet restore "RAZYEB BOT/RAZYEB BOT.csproj"
+      - run: dotnet run --project "RAZYEB BOT/RAZYEB BOT.csproj"
